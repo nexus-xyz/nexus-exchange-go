@@ -32,10 +32,13 @@ type Network int
 const (
 	// Mainnet is real funds: USDX bridged from Ethereum Mainnet, no faucet.
 	//
-	// Its base, https://api.nexus.xyz/v1, is the published one, but
-	// api.nexus.xyz has no DNS record yet (ENG-15183), so requests to it fail
-	// to resolve today. The entry exists so that when DNS lands no code has to
-	// guess the host.
+	// Not targetable by this release. Its base, https://api.nexus.xyz/v1, is
+	// the published one, but api.nexus.xyz has no DNS record yet (ENG-15183).
+	// NewClient(Mainnet) succeeds, and every request through that client is
+	// refused locally with [ErrMainnetNotTargetable] before any bytes leave the
+	// process, rather than sent to a real-funds host that may not be the one
+	// DNS eventually names. The entry exists so that when DNS lands, lifting the
+	// refusal is the only change and no code has to guess the host.
 	Mainnet Network = iota + 1
 	// Testnet is play funds: synthetic USDX from the faucet, no real value.
 	// The safe target for integration work and CI.

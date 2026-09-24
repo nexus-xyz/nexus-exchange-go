@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -75,5 +76,38 @@ func TestAPIErrorThroughClient(t *testing.T) {
 	}
 	if !errors.Is(err, ErrNotFound) || errors.Is(err, ErrUnauthorized) {
 		t.Error("404 must match ErrNotFound and nothing else")
+	}
+}
+
+// TestMainnetRefusedLocally pins that no request, read or mutation, leaves the
+// process on Mainnet while api.nexus.xyz has no DNS (ENG-15183).
+func TestMainnetRefusedLocally(t *testing.T) {
+	var calls atomic.Int32
+	hc := &http.Client{Transport: roundTrip(func(*http.Request) (*http.Response, error) {
+		calls.Add(1)
+		return nil, errors.New("unreachable")
+	})}
+	c, err := NewClient(Mainnet, WithHTTPClient(hc))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restBases[Mainnet] != "https://api.nexus.xyz/v1" {
+		t.Fatalf("mainnet base = %q", restBases[Mainnet])
+	}
+	ctx := context.Background()
+	for name, err := range map[string]error{
+		"GET":    c.t.Get(ctx, "/markets/summary", nil, nil),
+		"POST":   c.t.Send(ctx, http.MethodPost, "/orders", map[string]string{"k": "v"}, nil),
+		"DELETE": c.t.Send(ctx, http.MethodDelete, "/orders/abc", nil, nil),
+	} {
+		if !errors.Is(err, ErrMainnetNotTargetable) {
+			t.Errorf("%s: err = %v, want ErrMainnetNotTargetable", name, err)
+		}
+	}
+	if !strings.Contains(ErrMainnetNotTargetable.Error(), "ENG-15183") {
+		t.Error("refusal must name ENG-15183")
+	}
+	if n := calls.Load(); n != 0 {
+		t.Fatalf("%d request(s) left the process on Mainnet, want 0", n)
 	}
 }

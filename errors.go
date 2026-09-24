@@ -34,4 +34,8 @@ var (
 	// engine's margin view is down and the endpoint failed closed. Retry the
 	// read later, and never read it as an empty account.
 	ErrMarginUnavailable = transport.ErrMarginUnavailable
+	// ErrMainnetNotTargetable is returned by every request on a Mainnet client,
+	// before any network I/O: api.nexus.xyz has no DNS record yet (ENG-15183).
+	// It is local and permanent for this release; do not retry it.
+	ErrMainnetNotTargetable = transport.ErrMainnetNotTargetable
 )

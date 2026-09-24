@@ -15,6 +15,10 @@ var (
 	ErrNotFound          = errors.New("nexus: not found")
 	ErrRateLimited       = errors.New("nexus: rate limited")
 	ErrMarginUnavailable = errors.New("nexus: authoritative margin unavailable")
+
+	ErrMainnetNotTargetable = errors.New("nexus: Mainnet is not targetable by this release: " +
+		"api.nexus.xyz does not resolve yet (ENG-15183). Requests are refused locally rather than " +
+		"sent to a real-funds host on a guessed URL; use Testnet, or Local for an indexer you run")
 )
 
 // maxRetryAfter caps a server-advised delay, as the Rust SDK does, so a broken

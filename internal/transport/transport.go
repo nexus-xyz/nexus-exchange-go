@@ -39,6 +39,10 @@ type Transport struct {
 	maxRetries int
 	minDelay   time.Duration
 	maxDelay   time.Duration
+
+	// Refuse, when set, is returned by every request before any network I/O.
+	// NewClient sets it for Mainnet.
+	Refuse error
 }
 
 // New returns a Transport for base (no trailing slash) sending through hc.
@@ -60,6 +64,9 @@ func New(base string, hc *http.Client, apiVersion string) *Transport {
 // responses other than 501 and 505, up to maxRetries times with jittered
 // exponential backoff. A 429 is returned at once, never retried.
 func (t *Transport) Get(ctx context.Context, path string, query url.Values, out any) error {
+	if t.Refuse != nil {
+		return t.Refuse
+	}
 	if len(query) > 0 {
 		path += "?" + query.Encode()
 	}
@@ -85,6 +92,9 @@ func (t *Transport) Get(ctx context.Context, path string, query url.Values, out 
 // any outcome: after a lost response the SDK cannot know whether the server
 // acted, and resubmitting an order is worse than failing it.
 func (t *Transport) Send(ctx context.Context, method, path string, body, out any) error {
+	if t.Refuse != nil {
+		return t.Refuse
+	}
 	if method == http.MethodGet {
 		return errors.New("nexus: Send is for mutations; use Get")
 	}

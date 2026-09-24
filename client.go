@@ -41,6 +41,9 @@ func WithHTTPClient(hc *http.Client) Option {
 
 // NewClient returns a client for network. It returns an error if network is
 // not one of [Mainnet], [Testnet] or [Local]; there is no default network.
+//
+// A Mainnet client is built, but every request through it fails locally with
+// [ErrMainnetNotTargetable] until api.nexus.xyz resolves (ENG-15183).
 func NewClient(network Network, opts ...Option) (*Client, error) {
 	base, ok := restBases[network]
 	if !ok {
@@ -50,5 +53,9 @@ func NewClient(network Network, opts ...Option) (*Client, error) {
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	return &Client{t: transport.New(base, cfg.httpClient, APIVersion())}, nil
+	t := transport.New(base, cfg.httpClient, APIVersion())
+	if network == Mainnet {
+		t.Refuse = ErrMainnetNotTargetable
+	}
+	return &Client{t: t}, nil
 }
