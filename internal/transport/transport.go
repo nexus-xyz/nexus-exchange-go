@@ -13,6 +13,8 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/nexus-xyz/nexus-exchange-go/internal/signing"
 )
 
 const modulePath = "github.com/nexus-xyz/nexus-exchange-go"
@@ -30,6 +32,7 @@ const maxBody = 16 << 20
 // edge before the server verifies.
 type Transport struct {
 	base       string
+	basePath   string // base's own path prefix ("/v1"), not signed
 	http       *http.Client
 	userAgent  string
 	apiVersion string
@@ -43,13 +46,23 @@ type Transport struct {
 	// Refuse, when set, is returned by every request before any network I/O.
 	// NewClient sets it for Mainnet.
 	Refuse error
+
+	// Signer, when set, signs every request (every attempt, so a retried GET
+	// carries a fresh timestamp).
+	Signer *signing.HMAC
 }
 
 // New returns a Transport for base (no trailing slash) sending through hc.
 // apiVersion is sent on every request as X-Nexus-Api-Version.
 func New(base string, hc *http.Client, apiVersion string) *Transport {
+	base = strings.TrimRight(base, "/")
+	var basePath string
+	if u, err := url.Parse(base); err == nil {
+		basePath = u.EscapedPath()
+	}
 	return &Transport{
-		base:       strings.TrimRight(base, "/"),
+		base:       base,
+		basePath:   basePath,
 		http:       hc,
 		userAgent:  userAgent(),
 		apiVersion: apiVersion,
@@ -123,6 +136,11 @@ func (t *Transport) do(ctx context.Context, method, path string, body []byte, ou
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	if t.Signer != nil {
+		// Sign what goes on the wire, minus the base prefix the edge strips.
+		signed := strings.TrimPrefix(req.URL.EscapedPath(), t.basePath)
+		t.Signer.Apply(req.Header, method, signed, req.URL.RawQuery, body)
+	}
 	resp, err := t.http.Do(req)
 	if err != nil {
 		return fmt.Errorf("nexus: %s %s: %w", method, path, err)
@@ -133,7 +151,11 @@ func (t *Transport) do(ctx context.Context, method, path string, body []byte, ou
 		return fmt.Errorf("nexus: %s %s: read response: %w", method, path, err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return decodeError(resp.StatusCode, resp.Header, data)
+		e := decodeError(resp.StatusCode, resp.Header, data)
+		if resp.StatusCode == http.StatusUnauthorized && t.Signer != nil {
+			t.estimateSkew(e, resp.Header)
+		}
+		return e
 	}
 	if out == nil || len(data) == 0 {
 		return nil
@@ -142,6 +164,23 @@ func (t *Transport) do(ctx context.Context, method, path string, body []byte, ou
 		return fmt.Errorf("nexus: %s %s: decode response: %w", method, path, err)
 	}
 	return nil
+}
+
+// estimateSkew records how far the server's Date header is from the clock the
+// signer stamped with. It says nothing about why the server refused: a 401 is
+// opaque (R2.12), and skew is one fact among several possible causes.
+func (t *Transport) estimateSkew(e *APIError, h http.Header) {
+	d, err := http.ParseTime(h.Get("Date"))
+	if err != nil {
+		return
+	}
+	now := time.Now
+	if t.Signer.Now != nil {
+		now = t.Signer.Now
+	}
+	e.ServerTime = d
+	// Date has one-second resolution, so finer precision would be invented.
+	e.ClockSkew = d.Sub(now()).Round(time.Second)
 }
 
 // retryable reports whether a GET that failed with err may succeed if sent
