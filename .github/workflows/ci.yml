@@ -82,8 +82,9 @@ jobs:
             exit 1
           fi
 
-  # Is the pin the latest released spec? Same check as the sibling SDKs.
-  drift:
+  # Is the pin a published spec release? Same check as the sibling SDKs.
+  # Named `spec-pin`, not `drift`, as in nexus-exchange-rs (ENG-7961).
+  spec-pin:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -105,8 +106,11 @@ jobs:
             "${api}/releases/latest" | jq -r '.tag_name // empty')"
           [ -n "$latest" ] || { echo "::error::Could not determine latest release of ${SPEC_REPO}."; exit 1; }
           echo "Latest API spec release:  $latest"
+          # A pin that lags the latest release WARNS but passes (EDR-002): the
+          # SDK may validly trail the newest tag. Only a pin that is not a
+          # published release, checked above, fails.
           if [ "$pinned" != "$latest" ]; then
-            echo "::error::Spec drift: SDK pins ${pinned} but the latest Exchange API spec is ${latest}. Bump .api-version."
-            exit 1
+            echo "::warning::SDK pins ${pinned}; the latest Exchange API spec release is ${latest}."
+          else
+            echo "Pinned to the latest API spec release (${pinned})."
           fi
-          echo "No drift: pinned to the latest API spec (${pinned})."
