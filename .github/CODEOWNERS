@@ -1,0 +1,8 @@
+# Default reviewers: the @nexus-xyz/eng team. Any member can review and unblock --
+# no single-person bottleneck.
+#
+# Deliberately a team rather than named individuals, matching every other
+# nexus-exchange-* repo (ENG-14958): membership changes in org settings, and
+# GitHub silently omits a non-member from a review request.
+# Docs: https://docs.github.com/articles/about-code-owners
+* @nexus-xyz/eng
