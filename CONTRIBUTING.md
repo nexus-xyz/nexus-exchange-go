@@ -42,8 +42,11 @@ what users need from the root package with a deliberate type or alias.
 
 `.api-version` pins the released
 [Exchange API spec](https://github.com/nexus-xyz/nexus-exchange-api) tag this
-SDK is built against, the same file every sibling SDK carries. The `drift` CI
-job fails when it is not the latest spec release.
+SDK is built against, the same file every sibling SDK carries. The `spec-pin`
+CI job fails when it is not a published spec release, and warns (without
+failing) when a newer release exists, as the sibling SDKs do (EDR-002). The
+monorepo's `api-version-pins.json` does not track SDK pins; see "SDK pins are
+separate" in `eng/apps/exchange/api/README.md` there.
 
 The Go value is derived, not retyped: `version.go` embeds `.api-version` with
 `//go:embed`, and `nexus.APIVersion()` returns it. We chose `embed` over
