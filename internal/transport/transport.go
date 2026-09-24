@@ -146,6 +146,9 @@ func (t *Transport) do(ctx context.Context, method, path string, body []byte, ou
 		return fmt.Errorf("nexus: %s %s: %w", method, path, err)
 	}
 	defer resp.Body.Close()
+	if sink, ok := ctx.Value(headerSink{}).(*http.Header); ok {
+		*sink = resp.Header
+	}
 	data, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
 	if err != nil {
 		return fmt.Errorf("nexus: %s %s: read response: %w", method, path, err)

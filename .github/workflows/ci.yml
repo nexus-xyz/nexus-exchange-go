@@ -82,6 +82,27 @@ jobs:
             exit 1
           fi
 
+  # Read-only authenticated round trip against testnet (play funds): balance,
+  # positions, open orders, history, fills, cancel-on-disconnect status. It
+  # places nothing. Without the key secrets (not yet added, and never available
+  # to a fork PR) it skips and passes, so it cannot red an unrelated PR.
+  testnet-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - env:
+          NEXUS_TESTNET_KEY_ID: ${{ secrets.NEXUS_TESTNET_KEY_ID }}
+          NEXUS_TESTNET_KEY_SECRET: ${{ secrets.NEXUS_TESTNET_KEY_SECRET }}
+        run: |
+          if [ -z "$NEXUS_TESTNET_KEY_ID" ] || [ -z "$NEXUS_TESTNET_KEY_SECRET" ]; then
+            echo "::notice::Testnet smoke skipped: NEXUS_TESTNET_KEY_ID / NEXUS_TESTNET_KEY_SECRET are not set."
+            exit 0
+          fi
+          go test -run '^TestTestnetSmoke$' -v .
+
   # Is the pin a published spec release? Same check as the sibling SDKs.
   # Named `spec-pin`, not `drift`, as in nexus-exchange-rs (ENG-7961).
   spec-pin:
