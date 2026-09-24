@@ -64,6 +64,24 @@ jobs:
       # Dependabot does not track `go run` versions; bump this by hand.
       - run: go run honnef.co/go/tools/cmd/staticcheck@2026.2.1 ./...
 
+  # Are the checked-in models what the pinned spec generates? See
+  # docs/adr/0001-model-codegen.md.
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: go generate ./...
+      - run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Generated code is stale. Run go generate ./... and commit the result."
+            git status --porcelain
+            git diff
+            exit 1
+          fi
+
   # Is the pin the latest released spec? Same check as the sibling SDKs.
   drift:
     runs-on: ubuntu-latest
