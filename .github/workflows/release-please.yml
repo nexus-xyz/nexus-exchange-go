@@ -1,0 +1,35 @@
+name: release-please
+
+# Watches `main` and, from Conventional Commit subjects, keeps a standing
+# release PR that updates CHANGELOG.md and .release-please-manifest.json.
+# Merging that PR is the release: release-please tags the merge commit
+# `vX.Y.Z` and publishes a GitHub release. For a Go module the tag IS the
+# release (there is no registry upload), so there is no release.yml.
+#
+# Pre-1.0 policy, matching the rest of the fleet: `bump-minor-pre-major` and
+# `bump-patch-for-minor-pre-major` in release-please-config.json keep the
+# computed version below 1.0.0. See CONTRIBUTING.md "Releasing".
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # release commit, tag, release
+      pull-requests: write # open/update the release PR
+    steps:
+      - uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

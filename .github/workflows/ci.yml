@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Re-check an arbitrary ref by hand. Nothing here reads pull-request context,
+  # so every job behaves the same under all three triggers. Keep it that way.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # One job name per check, so each can be a required status check on `main`.
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # The go.mod minimum and the current stable release. See CONTRIBUTING.md.
+        go: ["go.mod", "stable"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: ${{ matrix.go == 'go.mod' && 'go.mod' || '' }}
+          go-version: ${{ matrix.go == 'stable' && 'stable' || '' }}
+      - run: go build ./...
+      - run: go test ./...
+
+  vet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+
+  gofmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      # `gofmt -l` exits 0 even when it lists files, so fail on any output.
+      - run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then
+            echo "::error::gofmt would reformat these files (run gofmt -w .):"
+            echo "$out"
+            exit 1
+          fi
+
+  staticcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      # Pinned, so a new staticcheck release cannot red an unrelated PR.
+      # Dependabot does not track `go run` versions; bump this by hand.
+      - run: go run honnef.co/go/tools/cmd/staticcheck@2026.2.1 ./...
+
+  # Is the pin the latest released spec? Same check as the sibling SDKs.
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check pinned API spec version against latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SPEC_REPO: nexus-xyz/nexus-exchange-api
+        run: |
+          set -euo pipefail
+          pinned="$(tr -d '[:space:]' < .api-version)"
+          [ -n "$pinned" ] || { echo "::error file=.api-version::.api-version is empty"; exit 1; }
+          echo "Pinned API spec version: $pinned"
+          api="https://api.github.com/repos/${SPEC_REPO}"
+          pinned_status="$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
+            "${api}/releases/tags/${pinned}")"
+          [ "$pinned_status" = "200" ] || { echo "::error::Pinned spec ${pinned} not found as a release in ${SPEC_REPO} (HTTP ${pinned_status})."; exit 1; }
+          latest="$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
+            "${api}/releases/latest" | jq -r '.tag_name // empty')"
+          [ -n "$latest" ] || { echo "::error::Could not determine latest release of ${SPEC_REPO}."; exit 1; }
+          echo "Latest API spec release:  $latest"
+          if [ "$pinned" != "$latest" ]; then
+            echo "::error::Spec drift: SDK pins ${pinned} but the latest Exchange API spec is ${latest}. Bump .api-version."
+            exit 1
+          fi
+          echo "No drift: pinned to the latest API spec (${pinned})."
