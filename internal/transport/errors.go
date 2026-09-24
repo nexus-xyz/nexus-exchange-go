@@ -49,6 +49,14 @@ type APIError struct {
 	Bucket string
 	// Tier is the rate-limit tier the refused request was charged against.
 	Tier string
+
+	// ServerTime is the Date header of a 401 to a signed request; zero when
+	// the response had none. ClockSkew is ServerTime minus the local clock
+	// (positive: the server is ahead), to the second. The signature is
+	// accepted only within 30 seconds of server time, so a large skew is worth
+	// checking, but the 401 itself does not say it was the cause.
+	ServerTime time.Time
+	ClockSkew  time.Duration
 }
 
 func (e *APIError) Error() string {
@@ -58,6 +66,10 @@ func (e *APIError) Error() string {
 	}
 	if e.Message != "" {
 		s += ": " + e.Message
+	}
+	if !e.ServerTime.IsZero() {
+		s += " (server clock differs from local by " + e.ClockSkew.String() +
+			"; signatures are accepted within 30s; the 401 does not say which check failed)"
 	}
 	return s
 }

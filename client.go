@@ -30,6 +30,10 @@ type Option func(*config)
 
 type config struct {
 	httpClient *http.Client
+
+	keyID   string
+	secret  APISecret
+	hmacSet bool
 }
 
 // WithHTTPClient makes the client send through hc, so callers can bring their
@@ -53,7 +57,12 @@ func NewClient(network Network, opts ...Option) (*Client, error) {
 	for _, opt := range opts {
 		opt(&cfg)
 	}
+	signer, err := cfg.signer()
+	if err != nil {
+		return nil, err
+	}
 	t := transport.New(base, cfg.httpClient, APIVersion())
+	t.Signer = signer
 	if network == Mainnet {
 		t.Refuse = ErrMainnetNotTargetable
 	}
