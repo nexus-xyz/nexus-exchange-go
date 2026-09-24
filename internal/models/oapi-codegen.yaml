@@ -1,0 +1,65 @@
+# Model generation for the v1 surface. Regenerate with `go generate ./...`.
+# Why oapi-codegen, and why each setting: docs/adr/0001-model-codegen.md.
+package: models
+output: models.gen.go
+generate:
+  models: true
+compatibility:
+  # Prefix every enum constant with its type (OrderSideBuy, not Buy), so a
+  # new enum elsewhere in the spec can never rename an existing constant.
+  always-prefix-enum-values: true
+output-options:
+  # Nullable fields (`["T","null"]`, or oneOf [T, null]) become
+  # nullable.Nullable[T], which keeps an explicit null apart from an absent key.
+  nullable-type: true
+  # Hand-written in decimal.go. References to the schema resolve to that type.
+  exclude-schemas: [Decimal]
+  type-mapping:
+    # CCXT-shaped fields the spec types as JSON numbers. json.Number keeps the
+    # served digits (it is a string), so no float64 enters a wire type.
+    number:
+      default: { type: json.Number, import: encoding/json }
+    # Kept as served strings: no runtime dependency for UUIDs, and CCXT's
+    # datetime round-trips byte for byte (doc.go, "Money and time").
+    string:
+      formats:
+        uuid: { type: string }
+        date-time: { type: string }
+  # The v1 surface (ENG-16552), as named at the pinned spec tag. Schemas these
+  # operations do not reach are pruned. Module 7, public market data:
+  include-operation-ids:
+    - fetchMarkets
+    - fetchMarketsSummary
+    - fetchMarkPrice
+    - fetchMarketRiskParams
+    - fetchMarketStatus
+    - fetchAdlEvents
+    - fetchStatus
+    - fetchStats
+    - fetchStatsHistory
+    - fetchAccountFunding
+    - fetchFunding
+    - fetchFundingSamples
+    - fetchTickers
+    - fetchTicker
+    - fetchOrderBook
+    - fetchTrades
+    - fetchOHLCV
+    # Module 8, the authenticated core:
+    - createOrder
+    - createOrdersBatch
+    - editOrder
+    - cancelOrder
+    - cancelAllOrders
+    - fetchOrder
+    - fetchOpenOrders
+    - fetchOrderHistory
+    - fetchFills
+    - fetchBalance
+    - fetchPositions
+    - fetchCancelOnDisconnect
+    - setCancelOnDisconnect
+    # Module 9, WebSocket token and upgrades:
+    - createWsToken
+    - connectWebSocket
+    - connectStream

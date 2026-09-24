@@ -31,12 +31,32 @@ Raising the minimum is a user-facing change: it needs a `feat` commit (not a
   there is under semver.
 - `internal/transport`: HTTP and WebSocket plumbing.
 - `internal/signing`: request authentication.
-- `internal/models`: types generated from the pinned OpenAPI spec.
+- `internal/models`: types generated from the pinned OpenAPI spec, plus the
+  hand-written `Decimal` they use for money (the root package aliases it).
 
 `internal/` is enforced by the compiler, so other modules cannot import these
 packages. That is the point: generated models change whenever the spec does,
 and keeping them internal keeps that churn out of the semver contract. Expose
 what users need from the root package with a deliberate type or alias.
+
+## Regenerating the models
+
+```sh
+go generate ./...
+```
+
+That fetches `openapi.json` from the spec release named in `.api-version` and
+runs `oapi-codegen` over it into `internal/models/models.gen.go`. The generator
+is pinned in `tools.mod` (a `tool` directive in a separate modfile, so its
+dependencies stay out of the SDK's own `go.mod`), and `go tool` runs it, so
+nothing needs installing. The `generate` CI job re-runs it and fails if the
+checked-in output differs.
+
+Which operations get models, and how types map, is
+`internal/models/oapi-codegen.yaml`. Why this generator and those mappings:
+[ADR 0001](docs/adr/0001-model-codegen.md). Bump the generator with
+`go get -modfile=tools.mod -tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@<version>`,
+then regenerate.
 
 ## API version
 
