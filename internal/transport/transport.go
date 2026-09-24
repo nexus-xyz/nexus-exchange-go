@@ -158,13 +158,31 @@ func (t *Transport) do(ctx context.Context, method, path string, body []byte, ou
 		if resp.StatusCode == http.StatusUnauthorized && t.Signer != nil {
 			t.estimateSkew(e, resp.Header)
 		}
+		if resp.StatusCode == http.StatusUpgradeRequired {
+			return newVersionError(e, t.apiVersion, resp.Header)
+		}
 		return e
 	}
 	if out == nil || len(data) == 0 {
 		return nil
 	}
-	if err := json.Unmarshal(data, out); err != nil {
+	if err := UnmarshalNumbers(data, out); err != nil {
 		return fmt.Errorf("nexus: %s %s: decode response: %w", method, path, err)
+	}
+	return nil
+}
+
+// UnmarshalNumbers is json.Unmarshal, except that a JSON number landing in an
+// interface{} (an orderbook level, a CCXT info map) decodes as json.Number
+// rather than float64, so no served digit is lost there either.
+func UnmarshalNumbers(data []byte, out any) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(out); err != nil {
+		return err
+	}
+	if dec.More() {
+		return errors.New("invalid character after top-level value")
 	}
 	return nil
 }
