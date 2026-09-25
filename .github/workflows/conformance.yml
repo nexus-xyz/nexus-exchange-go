@@ -1,0 +1,42 @@
+name: Conformance
+
+# The runtime conformance lane (TestConformance in conformance_test.go): every
+# row calls one SDK method against testnet and joins what it decoded against
+# the pinned spec. Scheduled, not per-PR, because it depends on testnet being
+# up. Its hermetic half, that every SDK method is accounted for, runs per-PR
+# inside `go test ./...` in CI.
+#
+# Read-only against testnet. The write tier needs the local stack and does not
+# run here.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testnet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - env:
+          NEXUS_CONFORMANCE: "1"
+          NEXUS_CONFORMANCE_KEY_ID: ${{ secrets.NEXUS_TESTNET_KEY_ID }}
+          NEXUS_CONFORMANCE_KEY_SECRET: ${{ secrets.NEXUS_TESTNET_KEY_SECRET }}
+          # A missing credential fails the scheduled run rather than skipping
+          # the private tier. A manual run may leave it out and run public only.
+          NEXUS_CONFORMANCE_REQUIRE_CREDENTIAL: ${{ github.event_name == 'schedule' && '1' || '' }}
+        run: |
+          set -o pipefail
+          go test -run '^TestConformance$' -v . | tee report.txt
+      - if: always()
+        run: |
+          if [ -f report.txt ]; then
+            { echo '```'; cat report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
