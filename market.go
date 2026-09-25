@@ -16,7 +16,7 @@ type (
 	// Market is one market's trading parameters: tick and lot size, margin
 	// rates, maximum leverage.
 	Market = models.Market
-	// MarketSummary is one row of [Client.MarketsSummary].
+	// MarketSummary is one row of [Client.FetchMarketsSummary].
 	MarketSummary = models.MarketSummary
 	// MarketRiskParams is a market's risk configuration.
 	MarketRiskParams = models.MarketRiskParams
@@ -24,11 +24,11 @@ type (
 	MarketStatus = models.MarketStatus
 	// AdlEventRecord is one auto-deleveraging settlement.
 	AdlEventRecord = models.AdlEventRecord
-	// ServiceHealth is what [Client.Status] returns.
+	// ServiceHealth is what [Client.FetchStatus] returns.
 	ServiceHealth = models.ServiceHealth
-	// StatsSnapshot is the exchange-wide snapshot [Client.Stats] returns.
+	// StatsSnapshot is the exchange-wide snapshot [Client.FetchStats] returns.
 	StatsSnapshot = models.StatsSnapshot
-	// ThroughputSample is one point of [Client.StatsHistory].
+	// ThroughputSample is one point of [Client.FetchStatsHistory].
 	ThroughputSample = models.ThroughputSample
 	// AccountFunding is one funding payment of the authenticated account.
 	AccountFunding = models.AccountFunding
@@ -131,121 +131,121 @@ func getJSON[T any](ctx context.Context, c *Client, path string, q url.Values) (
 	return v, err
 }
 
-// Markets lists every market's trading parameters (GET /markets).
-func (c *Client) Markets(ctx context.Context) ([]Market, error) {
+// FetchMarkets lists every market's trading parameters (GET /markets).
+func (c *Client) FetchMarkets(ctx context.Context) ([]Market, error) {
 	return getJSON[[]Market](ctx, c, "/markets", nil)
 }
 
-// MarketsSummary lists every market with its last price and 24h activity
+// FetchMarketsSummary lists every market with its last price and 24h activity
 // (GET /markets/summary).
-func (c *Client) MarketsSummary(ctx context.Context) ([]MarketSummary, error) {
+func (c *Client) FetchMarketsSummary(ctx context.Context) ([]MarketSummary, error) {
 	return getJSON[[]MarketSummary](ctx, c, "/markets/summary", nil)
 }
 
-// MarkPrice returns a market's current mark price
+// FetchMarkPrice returns a market's current mark price
 // (GET /markets/{market_id}/mark-price).
-func (c *Client) MarkPrice(ctx context.Context, marketID string) (*MarkPrice, error) {
+func (c *Client) FetchMarkPrice(ctx context.Context, marketID string) (*MarkPrice, error) {
 	return getJSON[*MarkPrice](ctx, c, marketPath(marketID, "/mark-price"), nil)
 }
 
-// MarketRiskParams returns a market's risk configuration
+// FetchMarketRiskParams returns a market's risk configuration
 // (GET /markets/{market_id}/risk-params).
-func (c *Client) MarketRiskParams(ctx context.Context, marketID string) (*MarketRiskParams, error) {
+func (c *Client) FetchMarketRiskParams(ctx context.Context, marketID string) (*MarketRiskParams, error) {
 	return getJSON[*MarketRiskParams](ctx, c, marketPath(marketID, "/risk-params"), nil)
 }
 
-// MarketStatus returns whether a market is trading
+// FetchMarketStatus returns whether a market is trading
 // (GET /markets/{market_id}/status).
-func (c *Client) MarketStatus(ctx context.Context, marketID string) (*MarketStatus, error) {
+func (c *Client) FetchMarketStatus(ctx context.Context, marketID string) (*MarketStatus, error) {
 	return getJSON[*MarketStatus](ctx, c, marketPath(marketID, "/status"), nil)
 }
 
-// AdlEvents returns up to limit ADL settlements for a market, newest first
+// FetchAdlEvents returns up to limit ADL settlements for a market, newest first
 // (GET /markets/{market_id}/adl-events). Zero limit leaves it to the server.
 //
 // The server requires a credential for this read: on a client without one it
 // returns a 401 [*APIError].
-func (c *Client) AdlEvents(ctx context.Context, marketID string, limit int) ([]AdlEventRecord, error) {
+func (c *Client) FetchAdlEvents(ctx context.Context, marketID string, limit int) ([]AdlEventRecord, error) {
 	return getJSON[[]AdlEventRecord](ctx, c, marketPath(marketID, "/adl-events"), limitQuery(limit))
 }
 
-// Status returns the service's health (GET /status).
-func (c *Client) Status(ctx context.Context) (*ServiceHealth, error) {
+// FetchStatus returns the service's health (GET /status).
+func (c *Client) FetchStatus(ctx context.Context) (*ServiceHealth, error) {
 	return getJSON[*ServiceHealth](ctx, c, "/status", nil)
 }
 
-// Stats returns the exchange-wide statistics snapshot (GET /stats).
-func (c *Client) Stats(ctx context.Context) (*StatsSnapshot, error) {
+// FetchStats returns the exchange-wide statistics snapshot (GET /stats).
+func (c *Client) FetchStats(ctx context.Context) (*StatsSnapshot, error) {
 	return getJSON[*StatsSnapshot](ctx, c, "/stats", nil)
 }
 
-// StatsHistory returns recent throughput samples (GET /stats/history).
-func (c *Client) StatsHistory(ctx context.Context) ([]ThroughputSample, error) {
+// FetchStatsHistory returns recent throughput samples (GET /stats/history).
+func (c *Client) FetchStatsHistory(ctx context.Context) ([]ThroughputSample, error) {
 	return getJSON[[]ThroughputSample](ctx, c, "/stats/history", nil)
 }
 
-// AccountFunding returns up to limit funding payments of the authenticated
+// FetchFundingHistory returns up to limit funding payments of the authenticated
 // account, newest first (GET /funding). Zero limit leaves it to the server.
 //
 // The server requires a credential for this read: on a client without one it
 // returns a 401 [*APIError].
-func (c *Client) AccountFunding(ctx context.Context, limit int) ([]AccountFunding, error) {
+func (c *Client) FetchFundingHistory(ctx context.Context, limit int) ([]AccountFunding, error) {
 	return getJSON[[]AccountFunding](ctx, c, "/funding", limitQuery(limit))
 }
 
-// Funding returns up to limit settled funding rates for a market
+// FetchFundingRateHistory returns up to limit settled funding rates for a market
 // (GET /markets/{market_id}/funding). Zero limit leaves it to the server.
-func (c *Client) Funding(ctx context.Context, marketID string, limit int) ([]FundingSample, error) {
+func (c *Client) FetchFundingRateHistory(ctx context.Context, marketID string, limit int) ([]FundingSample, error) {
 	return getJSON[[]FundingSample](ctx, c, marketPath(marketID, "/funding"), limitQuery(limit))
 }
 
-// FundingSamples returns up to limit premium samples for a market
+// FetchFundingSamples returns up to limit premium samples for a market
 // (GET /markets/{market_id}/funding-samples). Zero limit leaves it to the
 // server.
-func (c *Client) FundingSamples(ctx context.Context, marketID string, limit int) ([]FundingPremiumSample, error) {
+func (c *Client) FetchFundingSamples(ctx context.Context, marketID string, limit int) ([]FundingPremiumSample, error) {
 	return getJSON[[]FundingPremiumSample](ctx, c, marketPath(marketID, "/funding-samples"), limitQuery(limit))
 }
 
-// Tickers returns every market's ticker, keyed by market id (GET /tickers).
-func (c *Client) Tickers(ctx context.Context) (map[string]Ticker, error) {
+// FetchTickers returns every market's ticker, keyed by market id (GET /tickers).
+func (c *Client) FetchTickers(ctx context.Context) (map[string]Ticker, error) {
 	return getJSON[map[string]Ticker](ctx, c, "/tickers", nil)
 }
 
-// Ticker returns one market's ticker (GET /markets/{market_id}/ticker).
-func (c *Client) Ticker(ctx context.Context, marketID string) (*Ticker, error) {
+// FetchTicker returns one market's ticker (GET /markets/{market_id}/ticker).
+func (c *Client) FetchTicker(ctx context.Context, marketID string) (*Ticker, error) {
 	return getJSON[*Ticker](ctx, c, marketPath(marketID, "/ticker"), nil)
 }
 
-// OrderBook returns a market's book (GET /markets/{market_id}/orderbook).
-func (c *Client) OrderBook(ctx context.Context, marketID string) (*OrderBook, error) {
+// FetchOrderBook returns a market's book (GET /markets/{market_id}/orderbook).
+func (c *Client) FetchOrderBook(ctx context.Context, marketID string) (*OrderBook, error) {
 	return getJSON[*OrderBook](ctx, c, marketPath(marketID, "/orderbook"), nil)
 }
 
-// Trades iterates a market's trades, following the server's cursor from page
+// FetchTrades iterates a market's trades, following the server's cursor from page
 // to page (GET /markets/{market_id}/trades). limit is the page size, sent
 // unvalidated; zero leaves it to the server. Break out of the loop to stop.
 //
-//	for t, err := range client.Trades(ctx, "BTC-USDX-PERP", 500) {
+//	for t, err := range client.FetchTrades(ctx, "BTC-USDX-PERP", 500) {
 //		if err != nil {
 //			return err
 //		}
 //		...
 //	}
-func (c *Client) Trades(ctx context.Context, marketID string, limit int) iter.Seq2[Trade, error] {
+func (c *Client) FetchTrades(ctx context.Context, marketID string, limit int) iter.Seq2[Trade, error] {
 	return paginate[Trade](ctx, c, marketPath(marketID, "/trades"), limitQuery(limit))
 }
 
-// Candles returns one response of OHLCV bars, ascending by timestamp
+// FetchOHLCV returns one response of OHLCV bars, ascending by timestamp
 // (GET /markets/{market_id}/candles). To read further back than one
-// response holds, use [Client.CandleHistory].
+// response holds, use [Client.FetchOHLCVHistory].
 //
 // StartTime and EndTime are not in the pinned spec (v0.8.1); the server
 // accepts them and later specs document them.
-func (c *Client) Candles(ctx context.Context, marketID string, p CandlesParams) ([]Candle, error) {
+func (c *Client) FetchOHLCV(ctx context.Context, marketID string, p CandlesParams) ([]Candle, error) {
 	return getJSON[[]Candle](ctx, c, marketPath(marketID, "/candles"), p.query())
 }
 
-// CandleHistory walks a market's candles backwards through history, newest
+// FetchOHLCVHistory walks a market's candles backwards through history, newest
 // first, one request per p.Limit bars. It starts at p.EndTime (zero: now) and
 // each request ends just before the oldest bar the last one returned. It
 // stops when the server has no older bars, when it passes p.StartTime (if
@@ -254,12 +254,12 @@ func (c *Client) Candles(ctx context.Context, marketID string, p CandlesParams) 
 //
 // A server that ignores endTime would serve the same page forever; the walk
 // detects that and yields an error instead.
-func (c *Client) CandleHistory(ctx context.Context, marketID string, p CandlesParams) iter.Seq2[Candle, error] {
+func (c *Client) FetchOHLCVHistory(ctx context.Context, marketID string, p CandlesParams) iter.Seq2[Candle, error] {
 	return func(yield func(Candle, error) bool) {
 		stop := p.StartTime
 		p.StartTime = 0
 		for {
-			bars, err := c.Candles(ctx, marketID, p)
+			bars, err := c.FetchOHLCV(ctx, marketID, p)
 			if err != nil {
 				yield(Candle{}, err)
 				return

@@ -10,12 +10,12 @@ import (
 // and its companion *Error field says why; it is never a made-up number.
 type Position = models.Position
 
-// Positions returns the account's open positions (GET /positions).
+// FetchPositions returns the account's open positions (GET /positions).
 //
-// It fails closed like [Account.Balance]: an outage of the authoritative
+// It fails closed like [Account.FetchBalance]: an outage of the authoritative
 // margin view is an error matching [ErrMarginUnavailable] and no positions,
 // never an empty list.
-func (c *Client) Positions(ctx context.Context) ([]Position, error) {
+func (c *Client) FetchPositions(ctx context.Context) ([]Position, error) {
 	var out []Position
 	if err := c.t.Get(ctx, "/positions", nil, &out); err != nil {
 		return nil, err

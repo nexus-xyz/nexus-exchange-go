@@ -14,14 +14,14 @@ import (
 // an explicit null apart from an absent key.
 type (
 	// OrderRequest is the body of [Client.CreateOrder] and one entry of
-	// [Client.CreateOrdersBatch]. It is snake_case on the wire (market_id,
+	// [Client.CreateOrders]. It is snake_case on the wire (market_id,
 	// quantity, time_in_force).
 	OrderRequest = models.OrderRequest
 	// OrderResponse is what [Client.CreateOrder] returns: the placed order and
 	// any fills it took immediately. At the pinned spec (v0.8.1) it is the
 	// snake_case {order, fills} shape.
 	OrderResponse = models.OrderResponse
-	// OrderResult is one entry of a [Client.CreateOrdersBatch] response.
+	// OrderResult is one entry of a [Client.CreateOrders] response.
 	// Branch on Discriminator ("ok" or "err"), then read it with
 	// AsOrderResultOk or AsOrderResultErr.
 	OrderResult    = models.OrderResult
@@ -32,9 +32,9 @@ type (
 	AmendOrderRequest = models.AmendOrderRequest
 	// Order is an order as GET /orders serves it.
 	Order = models.Order
-	// OrderHistoryEntry is a terminal order from [Client.OrderHistory].
+	// OrderHistoryEntry is a terminal order from [Client.FetchOrders].
 	OrderHistoryEntry = models.OrderHistoryEntry
-	// Fill is one execution from [Client.Fills].
+	// Fill is one execution from [Client.FetchMyTrades].
 	Fill = models.Fill
 
 	OrderType   = models.OrderRequestOrderType
@@ -104,7 +104,7 @@ func (c *Client) CreateOrder(ctx context.Context, req OrderRequest) (*OrderRespo
 	return &out, nil
 }
 
-// CreateOrdersBatch places reqs in one request (POST /orders/batch) and
+// CreateOrders places reqs in one request (POST /orders/batch) and
 // returns one result per order, in request order. The batch is sequential and
 // not atomic: a rejected order does not abort the rest, and an early order
 // can use margin a later one needed. Check every result.
@@ -113,7 +113,7 @@ func (c *Client) CreateOrder(ctx context.Context, req OrderRequest) (*OrderRespo
 // to 39 orders cost the same as one; the client paces it on that weight, read
 // from the pinned spec. The batch is sent exactly as given: the SDK does not
 // split it into chunks, and it is never retried.
-func (c *Client) CreateOrdersBatch(ctx context.Context, reqs []OrderRequest) ([]OrderResult, error) {
+func (c *Client) CreateOrders(ctx context.Context, reqs []OrderRequest) ([]OrderResult, error) {
 	var out []OrderResult
 	if err := c.t.Send(ctx, http.MethodPost, "/orders/batch", reqs, &out); err != nil {
 		return nil, err
@@ -169,9 +169,9 @@ func (c *Client) CancelAllOrders(ctx context.Context, marketID string) ([]Order,
 	return out, nil
 }
 
-// Order returns one order (GET /orders/{id}). An order that is not yours is
+// FetchOrder returns one order (GET /orders/{id}). An order that is not yours is
 // reported as [ErrNotFound].
-func (c *Client) Order(ctx context.Context, orderID, marketID string) (*Order, error) {
+func (c *Client) FetchOrder(ctx context.Context, orderID, marketID string) (*Order, error) {
 	var out Order
 	if err := c.t.Get(ctx, "/orders/"+url.PathEscape(orderID), url.Values{"market_id": {marketID}}, &out); err != nil {
 		return nil, err
@@ -179,8 +179,8 @@ func (c *Client) Order(ctx context.Context, orderID, marketID string) (*Order, e
 	return &out, nil
 }
 
-// OpenOrders returns the account's resting orders (GET /orders).
-func (c *Client) OpenOrders(ctx context.Context) ([]Order, error) {
+// FetchOpenOrders returns the account's resting orders (GET /orders).
+func (c *Client) FetchOpenOrders(ctx context.Context) ([]Order, error) {
 	var out []Order
 	if err := c.t.Get(ctx, "/orders", nil, &out); err != nil {
 		return nil, err
@@ -188,10 +188,10 @@ func (c *Client) OpenOrders(ctx context.Context) ([]Order, error) {
 	return out, nil
 }
 
-// OrderHistory returns one page of terminal orders (filled, cancelled,
+// FetchOrders returns one page of terminal orders (filled, cancelled,
 // rejected, expired), newest first (GET /orders/history), and the cursor for
 // the next page, empty on the last.
-func (c *Client) OrderHistory(ctx context.Context, p Page) ([]OrderHistoryEntry, string, error) {
+func (c *Client) FetchOrders(ctx context.Context, p Page) ([]OrderHistoryEntry, string, error) {
 	var out []OrderHistoryEntry
 	next, err := c.t.GetPage(ctx, "/orders/history", p.query(), &out)
 	if err != nil {
@@ -200,9 +200,9 @@ func (c *Client) OrderHistory(ctx context.Context, p Page) ([]OrderHistoryEntry,
 	return out, next, nil
 }
 
-// Fills returns one page of the account's fills, newest first (GET /fills),
+// FetchMyTrades returns one page of the account's fills, newest first (GET /fills),
 // and the cursor for the next page, empty on the last.
-func (c *Client) Fills(ctx context.Context, p Page) ([]Fill, string, error) {
+func (c *Client) FetchMyTrades(ctx context.Context, p Page) ([]Fill, string, error) {
 	var out []Fill
 	next, err := c.t.GetPage(ctx, "/fills", p.query(), &out)
 	if err != nil {

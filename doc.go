@@ -23,7 +23,7 @@
 //   - [WithHMACAuth]: an API key. The usual choice for a bot.
 //   - [WithWallet]: the owner wallet's key. The client signs in (EIP-191) and
 //     keeps its session fresh. Full authority over the account.
-//   - [WithSession]: a session from [Client.SignIn], used until it expires and
+//   - [WithSession]: a session from [Client.Login], used until it expires and
 //     then refused locally with [ErrSessionExpired].
 //   - [WithAgent]: an agent key the wallet registered with
 //     [Client.RegisterAgent] (EIP-712). It trades for the wallet's account and

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// TestTestnetSignIn runs the wallet postures end to end against testnet with
+// TestTestnetLogin runs the wallet postures end to end against testnet with
 // a throwaway wallet, so it needs no funds and no secret: sign-in, a session
 // read, an API key minted by the session, agent registration, an agent read,
 // and the local R2.18 refusal. It cleans up the agent and the key.
@@ -16,8 +16,8 @@ import (
 // It writes to testnet (a key and an agent under a fresh wallet), so it runs
 // only when asked:
 //
-//	NEXUS_TESTNET_SIGNIN=1 go test -run TestTestnetSignIn -v .
-func TestTestnetSignIn(t *testing.T) {
+//	NEXUS_TESTNET_SIGNIN=1 go test -run TestTestnetLogin -v .
+func TestTestnetLogin(t *testing.T) {
 	if os.Getenv("NEXUS_TESTNET_SIGNIN") == "" {
 		t.Skip("NEXUS_TESTNET_SIGNIN not set")
 	}
@@ -32,7 +32,7 @@ func TestTestnetSignIn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sess, err := pub.SignIn(ctx, wallet)
+	sess, err := pub.Login(ctx, wallet)
 	if err != nil {
 		t.Fatalf("SignIn: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestTestnetSignIn(t *testing.T) {
 		t.Fatalf("session address %s, want %s", sess.Address(), wallet.Address())
 	}
 	sc, _ := NewClient(Testnet, WithSession(sess))
-	if _, err := sc.APIKeys(ctx); err != nil {
+	if _, err := sc.FetchAPIKeys(ctx); err != nil {
 		t.Fatalf("APIKeys with session: %v", err)
 	}
 	key, err := sc.CreateAPIKey(ctx)
@@ -72,11 +72,11 @@ func TestTestnetSignIn(t *testing.T) {
 			t.Errorf("RevokeAgent: %v", err)
 		}
 	}()
-	if list, err := hc.Agents(ctx); err != nil || len(list) != 1 {
+	if list, err := hc.FetchAgents(ctx); err != nil || len(list) != 1 {
 		t.Errorf("Agents = %d, %v; want the one just registered", len(list), err)
 	}
 	ac, _ := NewClient(Testnet, WithAgent(agent))
-	if _, err := ac.OpenOrders(ctx); err != nil {
+	if _, err := ac.FetchOpenOrders(ctx); err != nil {
 		t.Errorf("OpenOrders with agent: %v", err)
 	}
 	if err := ac.t.Send(ctx, "POST", "/withdrawals", map[string]string{"amount": "1"}, nil); !errors.Is(err, ErrAgentCannotWithdraw) {

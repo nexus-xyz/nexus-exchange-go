@@ -29,32 +29,32 @@ func TestTestnetSmoke(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	if a, err := c.Account().Balance(ctx); err != nil {
+	if a, err := c.Account().FetchBalance(ctx); err != nil {
 		t.Errorf("Balance: %v", err)
 	} else {
 		t.Logf("Balance: equity %v", a.Equity)
 	}
-	if p, err := c.Positions(ctx); err != nil {
+	if p, err := c.FetchPositions(ctx); err != nil {
 		t.Errorf("Positions: %v", err)
 	} else {
 		t.Logf("Positions: %d", len(p))
 	}
-	if o, err := c.OpenOrders(ctx); err != nil {
+	if o, err := c.FetchOpenOrders(ctx); err != nil {
 		t.Errorf("OpenOrders: %v", err)
 	} else {
 		t.Logf("OpenOrders: %d", len(o))
 	}
-	if h, _, err := c.OrderHistory(ctx, Page{Limit: 5}); err != nil {
+	if h, _, err := c.FetchOrders(ctx, Page{Limit: 5}); err != nil {
 		t.Errorf("OrderHistory: %v", err)
 	} else {
 		t.Logf("OrderHistory: %d", len(h))
 	}
-	if f, _, err := c.Fills(ctx, Page{Limit: 5}); err != nil {
+	if f, _, err := c.FetchMyTrades(ctx, Page{Limit: 5}); err != nil {
 		t.Errorf("Fills: %v", err)
 	} else {
 		t.Logf("Fills: %d", len(f))
 	}
-	if s, err := c.Account().CancelOnDisconnect(ctx); err != nil {
+	if s, err := c.Account().FetchCancelOnDisconnect(ctx); err != nil {
 		t.Errorf("CancelOnDisconnect: %v", err)
 	} else {
 		t.Logf("CancelOnDisconnect: enabled %v active %v", s.Enabled, s.Active)

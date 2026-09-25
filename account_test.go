@@ -14,14 +14,14 @@ func TestMarginUnavailableFailsClosed(t *testing.T) {
 	body := `{"code":"authoritative_margin_unavailable","message":"engine margin view unavailable"}`
 	t.Run("balance", func(t *testing.T) {
 		c, _ := recorder(t, 502, body)
-		a, err := c.Account().Balance(ctx)
+		a, err := c.Account().FetchBalance(ctx)
 		if !errors.Is(err, ErrMarginUnavailable) || a != nil {
 			t.Fatalf("Balance = %v, %v; want nil, ErrMarginUnavailable", a, err)
 		}
 	})
 	t.Run("positions", func(t *testing.T) {
 		c, _ := recorder(t, 502, body)
-		p, err := c.Positions(ctx)
+		p, err := c.FetchPositions(ctx)
 		if !errors.Is(err, ErrMarginUnavailable) || p != nil {
 			t.Fatalf("Positions = %v, %v; want nil, ErrMarginUnavailable", p, err)
 		}

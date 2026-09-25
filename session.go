@@ -30,10 +30,10 @@ const sessionMargin = time.Minute
 // [WithSession] client whose session has passed its expiry. It is local: it
 // never matches [ErrUnauthorized], because the server's 401 cannot say a
 // session expired (R2.12) and the SDK does not guess. Sign in again with
-// [Client.SignIn], or use [WithWallet], which does that for you.
+// [Client.Login], or use [WithWallet], which does that for you.
 var ErrSessionExpired = errors.New("nexus: session expired")
 
-// Session is a bearer session from wallet sign-in ([Client.SignIn]). The
+// Session is a bearer session from wallet sign-in ([Client.Login]). The
 // token is a full-authority wallet credential, valid only on the network that
 // minted it, and it cannot be printed: fmt and JSON show the address only.
 type Session struct {
@@ -60,13 +60,13 @@ func (s *Session) Format(f fmt.State, _ rune) { fmt.Fprint(f, s.String()) }
 // MarshalJSON emits the address, never the token.
 func (s *Session) MarshalJSON() ([]byte, error) { return []byte(`"` + s.String() + `"`), nil }
 
-// SignIn signs the fixed sign-in message with wallet (EIP-191 personal_sign)
+// Login signs the fixed sign-in message with wallet (EIP-191 personal_sign)
 // and exchanges it for a session (POST /auth/login). Pass the session to
 // [WithSession]. It needs no credential on c.
 //
 // It is sent once and not retried; the login budget is small and a 429
 // carries Retry-After.
-func (c *Client) SignIn(ctx context.Context, wallet *PrivateKey) (*Session, error) {
+func (c *Client) Login(ctx context.Context, wallet *PrivateKey) (*Session, error) {
 	if wallet == nil {
 		return nil, errors.New("nexus: SignIn needs a wallet key")
 	}
@@ -131,7 +131,7 @@ type APIKey struct {
 	Secret APISecret
 }
 
-// APIKeyInfo is one key from [Client.APIKeys]. The secret is never listed.
+// APIKeyInfo is one key from [Client.FetchAPIKeys]. The secret is never listed.
 //
 // Hand-written: the pinned spec gives these responses an example but no
 // schema, so there is nothing to generate.
@@ -157,9 +157,9 @@ func (c *Client) CreateAPIKey(ctx context.Context) (*APIKey, error) {
 	return &APIKey{KeyID: out.KeyID, Secret: secret}, nil
 }
 
-// APIKeys lists the signed-in wallet's API keys on this network (GET /keys,
+// FetchAPIKeys lists the signed-in wallet's API keys on this network (GET /keys,
 // bearerAuth).
-func (c *Client) APIKeys(ctx context.Context) ([]APIKeyInfo, error) {
+func (c *Client) FetchAPIKeys(ctx context.Context) ([]APIKeyInfo, error) {
 	var out []APIKeyInfo
 	if err := c.t.Get(ctx, "/keys", nil, &out); err != nil {
 		return nil, err
