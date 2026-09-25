@@ -265,10 +265,16 @@ func laneOps(c *Client, market string, w *writeTier) []conformance.Op {
 	return append(ops, []conformance.Op{
 		{ID: "createOrder", Method: "Client.CreateOrder", Write: true, Call: w.step(func(ctx context.Context) error {
 			resp, err := c.CreateOrder(ctx, w.req)
-			if err == nil && resp.Order != nil && resp.Order.Id != nil {
+			if err != nil {
+				// A band narrower than assumed rejects the order, so name the
+				// assumption rather than leave a bare venue error.
+				return fmt.Errorf("resting %s at %d bps below mark, inside an assumed %d bps band the spec does not publish: %w",
+					w.req.Price, assumedBandBps/2, assumedBandBps, err)
+			}
+			if resp.Order != nil && resp.Order.Id != nil {
 				w.placed = *resp.Order.Id
 			}
-			return err
+			return nil
 		})},
 		{ID: "fetchOrder", Method: "Client.Order", Write: true, Call: w.onPlaced(func(ctx context.Context) error {
 			_, err := c.Order(ctx, w.placed, market)
@@ -338,11 +344,16 @@ func (w *writeTier) onPlaced(f func(context.Context) error) func(context.Context
 	})
 }
 
+// assumedBandBps is the venue's default order-vs-mark price band. The pinned
+// spec publishes no per-market band, so this is an assumption about the venue,
+// not a value read from it. If it stops holding, createOrder fails and its
+// error says so (see laneOps).
+const assumedBandBps = 500
+
 // prepare funds the account and prices an order that rests rather than
-// fills. The pinned spec publishes no per-market price band, so the venue's
-// default of 500 bps is the bound: the order rests half of it below the mark
-// and the amend three quarters, leaving the rest as headroom for the mark
-// moving while the run reads.
+// fills: the order rests half of assumedBandBps below the mark and the amend
+// three quarters, leaving the rest as headroom for the mark moving while the
+// run reads.
 func (w *writeTier) prepare(ctx context.Context, c *Client) error {
 	// Funding is setup, not measurement: /account/credit has no SDK method.
 	// It fails once the day's allowance is claimed, which a funded account
@@ -361,11 +372,11 @@ func (w *writeTier) prepare(ctx context.Context, c *Client) error {
 		return fmt.Errorf("market %s has no tick size or minimum size", w.market)
 	}
 	tick := *markets[i].TickSize
-	price, err := below(mark.MarkPrice, tick, 250)
+	price, err := below(mark.MarkPrice, tick, assumedBandBps/2)
 	if err != nil {
 		return err
 	}
-	if w.amend, err = below(mark.MarkPrice, tick, 375); err != nil {
+	if w.amend, err = below(mark.MarkPrice, tick, assumedBandBps*3/4); err != nil {
 		return err
 	}
 	if price.String() == w.amend.String() {
@@ -379,7 +390,7 @@ func (w *writeTier) prepare(ctx context.Context, c *Client) error {
 // below is mark less bps basis points, rounded down to tick.
 func below(mark, tick Decimal, bps int64) (Decimal, error) {
 	m, t := mark.Rat(), tick.Rat()
-	if m == nil || t == nil || t.Sign() <= 0 {
+	if m == nil || t == nil || m.Sign() <= 0 || t.Sign() <= 0 {
 		return Decimal{}, fmt.Errorf("cannot price below mark %q on tick %q", mark, tick)
 	}
 	q := new(big.Rat).Mul(m, big.NewRat(10000-bps, 10000))
