@@ -31,7 +31,8 @@ const fixture = `{
       {"type": "array", "items": {"$ref": "#/components/schemas/Market"}}}}}}}},
     "/results": {"get": {"operationId": "fetchResults", "responses": {"200": {"content": {"application/json": {"schema":
       {"type": "array", "items": {"oneOf": [{"$ref": "#/components/schemas/Ok"}, {"$ref": "#/components/schemas/Err"}]}}}}}}}},
-    "/book": {"get": {"operationId": "fetchBook", "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Book"}}}}}}}
+    "/book": {"get": {"operationId": "fetchBook", "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Book"}}}}}}},
+    "/loop": {"get": {"operationId": "fetchLoop", "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Loop"}}}}}}}
   },
   "components": {"schemas": {
     "Decimal": {"type": "string"},
@@ -48,6 +49,7 @@ const fixture = `{
     "Market": {"type": "object", "properties": {"market_id": {"type": "string"}, "tick_size": {"$ref": "#/components/schemas/Decimal"}}},
     "Ok": {"type": "object", "required": ["outcome", "order"], "properties": {"outcome": {"type": "string"}, "order": {"$ref": "#/components/schemas/Order"}}},
     "Err": {"type": "object", "required": ["outcome", "error"], "properties": {"outcome": {"type": "string"}, "error": {"type": "string"}}},
+    "Loop": {"$ref": "#/components/schemas/Loop"},
     "Book": {"type": "object", "properties": {"bids": {"type": "array", "items": {"type": "array", "prefixItems": [{"type": "number"}, {"type": "number"}]}}}}
   }}
 }`
@@ -108,6 +110,7 @@ func TestCheck(t *testing.T) {
 		{"nested empty array is noted", "fetchBook", `{"bids":[]}`, 1, []string{"info bids"}},
 		{"prefixItems by position", "fetchBook", `{"bids":[[1,"2"]]}`, 1, []string{"error bids[][1]"}},
 		{"not JSON", "fetchTrades", `<html>`, 0, []string{"error "}},
+		{"too deep to check is a warning, not a silent pass", "fetchLoop", `{"a":1}`, 1, []string{"warn "}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			items, found := s.Check(s.Ops[tc.op], []byte(tc.body))
