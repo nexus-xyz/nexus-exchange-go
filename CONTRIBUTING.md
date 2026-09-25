@@ -52,6 +52,13 @@ dependencies stay out of the SDK's own `go.mod`), and `go tool` runs it, so
 nothing needs installing. The `generate` CI job re-runs it and fails if the
 checked-in output differs.
 
+The same run regenerates `internal/transport/weights.gen.go`, the rate-limit
+weight and budget of every operation, from the spec's
+`x-nexus-rate-limit-weight`, `-weight-formula` and `-class` markers
+(`internal/transport/genweights`). Never type a weight into the source: the
+spec is the one place it lives. A formula the transport does not implement
+fails generation.
+
 Which operations get models, and how types map, is
 `internal/models/oapi-codegen.yaml`. Why this generator and those mappings:
 [ADR 0001](docs/adr/0001-model-codegen.md). Bump the generator with

@@ -110,8 +110,9 @@ func (c *Client) CreateOrder(ctx context.Context, req OrderRequest) (*OrderRespo
 // can use margin a later one needed. Check every result.
 //
 // The request costs 1 + floor(len(reqs)/40) units of the trading budget, so up
-// to 39 orders cost the same as one. The batch is sent exactly as given: the
-// SDK does not split it into chunks, and it is never retried.
+// to 39 orders cost the same as one; the client paces it on that weight, read
+// from the pinned spec. The batch is sent exactly as given: the SDK does not
+// split it into chunks, and it is never retried.
 func (c *Client) CreateOrdersBatch(ctx context.Context, reqs []OrderRequest) ([]OrderResult, error) {
 	var out []OrderResult
 	if err := c.t.Send(ctx, http.MethodPost, "/orders/batch", reqs, &out); err != nil {
@@ -133,10 +134,12 @@ func (c *Client) EditOrder(ctx context.Context, orderID, marketID string, req Am
 // CancelOrder cancels one order (DELETE /orders/{id}) and returns it. It is
 // never retried.
 //
-// A cancel is never delayed. The SDK has no client-side queue, limiter or
-// per-client lock, so a cancel goes out the moment it is called, however many
-// submissions are in flight or blocked. The server keeps cancels on a budget
-// of their own so risk can always be reduced, and the SDK does not undo that.
+// A cancel is never delayed. The client paces reads and submissions on their
+// own budgets, but has no budget for cancels at all, so a cancel goes out the
+// moment it is called, however many submissions are in flight or waiting. The
+// server keeps cancels on a budget of their own so risk can always be reduced,
+// and the SDK does not undo that; if that budget is spent, the 429 (Bucket
+// "cancel") comes back at once rather than being waited out.
 // An *http.Client given with [WithHTTPClient] that caps connections per host
 // can still serialize requests; do not cap it below the concurrency you need.
 //

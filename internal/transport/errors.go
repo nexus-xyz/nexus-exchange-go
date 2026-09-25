@@ -41,7 +41,10 @@ type APIError struct {
 	Details map[string]json.RawMessage
 
 	// RetryAfter is the 429 Retry-After header in seconds, capped at five
-	// minutes; zero when absent or not in seconds.
+	// minutes; zero when absent or not in seconds. It is derived from the
+	// weighted cost of the refused request, so it is not in the unit of
+	// x-ratelimit-remaining (unit-cost requests) and says nothing about how
+	// many other calls would fit.
 	RetryAfter time.Duration
 	// Bucket is the 429 budget that refused the request (key, owner, order,
 	// cancel, ip, login). Buckets are independent: do not back off the whole
