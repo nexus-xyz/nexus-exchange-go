@@ -1,6 +1,7 @@
 package signing
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -45,13 +46,23 @@ func Sign(secret []byte, canonical string) string {
 	return hex.EncodeToString(m.Sum(nil))
 }
 
+// Clock is the time the next timestamp will be read from.
+func (s *HMAC) Clock() time.Time {
+	if s.Now != nil {
+		return s.Now()
+	}
+	return time.Now()
+}
+
+// Sign is Apply as a transport.Signer. It never fails.
+func (s *HMAC) Sign(_ context.Context, h http.Header, method, path, query string, body []byte) error {
+	s.Apply(h, method, path, query, body)
+	return nil
+}
+
 // Apply sets x-api-key, x-timestamp and x-signature on h for a request.
 func (s *HMAC) Apply(h http.Header, method, path, query string, body []byte) {
-	now := time.Now
-	if s.Now != nil {
-		now = s.Now
-	}
-	ts := now().UnixMilli()
+	ts := s.Clock().UnixMilli()
 	h.Set("X-Api-Key", s.KeyID)
 	h.Set("X-Timestamp", strconv.FormatInt(ts, 10))
 	h.Set("X-Signature", Sign(s.Secret, Canonical(ts, method, path, query, body)))

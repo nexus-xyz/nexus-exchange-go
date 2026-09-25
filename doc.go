@@ -14,4 +14,21 @@
 // timestamp (int64 epoch ms) and the ISO-8601 datetime string exactly as
 // served; the SDK keeps both rather than collapsing them into one time.Time,
 // so it never decides for the caller which one is authoritative.
+//
+// # Credentials
+//
+// A [Client] holds at most one credential, and every one of them can say which
+// account it acts for ([Client.AccountAddress]):
+//
+//   - [WithHMACAuth]: an API key. The usual choice for a bot.
+//   - [WithWallet]: the owner wallet's key. The client signs in (EIP-191) and
+//     keeps its session fresh. Full authority over the account.
+//   - [WithSession]: a session from [Client.SignIn], used until it expires and
+//     then refused locally with [ErrSessionExpired].
+//   - [WithAgent]: an agent key the wallet registered with
+//     [Client.RegisterAgent] (EIP-712). It trades for the wallet's account and
+//     can never withdraw ([ErrAgentCannotWithdraw], R2.18).
+//
+// Credentials are bound to one network. A key, session or agent from testnet
+// is refused on mainnet, and the other way round.
 package nexus
