@@ -124,6 +124,8 @@ func (c *Client) RegisterAgent(ctx context.Context, wallet, agent *PrivateKey, o
 	if err := c.pub.Send(ctx, http.MethodPost, "/agents/register", body, &out); err != nil {
 		return nil, err
 	}
+	// NewAgent cannot fail here: agent is non-nil (checked above) and
+	// wallet.Address() is derived from a key, so it is always a valid address.
 	a, _ := NewAgent(agent, wallet.Address())
 	a.expiresAt = time.UnixMilli(expMs)
 	if out.ExpiresAt != 0 {
