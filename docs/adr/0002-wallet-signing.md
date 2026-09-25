@@ -1,6 +1,6 @@
-# ADR 0002: Wallet signing without go-ethereum
+# ADR 0002: Wallet signing with go-ethereum
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-09-25
 - Ticket: ENG-16556 (epic ENG-16552)
 
@@ -8,63 +8,83 @@
 
 Wallet sign-in, agent registration and agent request signing need four
 primitives: Keccak-256, secp256k1 recoverable ECDSA (RFC 6979, low-S, v in
-{27, 28}), the EIP-191 `personal_sign` digest, and the EIP-712 digest of one
-struct, `RegisterAgent{address agent, uint64 expiresAt, uint64 nonce}`. The
-obvious Go source is go-ethereum (`crypto`, `accounts`,
-`signer/core/apitypes`), the analogue of the Python SDK's `eth-account`.
+{27, 28}), the EIP-191 `personal_sign` digest, and the EIP-712 digest of
+`RegisterAgent{address agent, uint64 expiresAt, uint64 nonce}`.
 
 Most callers of this SDK read market data or trade with an HMAC key and need
-none of it. Whatever the wallet code imports, every importer of the root
-package compiles and links, because the credential options live on the root
-`Client`.
+none of it. The credential options live on the root `Client`, so whatever the
+wallet code imports, every importer of the root package compiles and links.
 
 ## Options
 
-Measured on 2026-09-25 with a program that only calls `NewClient(Testnet)`
-and `Markets` (darwin/amd64, Go 1.26).
+| Option | Cost |
+| --- | --- |
+| **go-ethereum in the root module** (`crypto`, `accounts.TextHash`, `signer/core/apitypes`) | The largest module graph and binary of the options (measured below) |
+| go-ethereum in a separate module (`nexus-exchange-go/wallet`) | A second module to version, tag (`wallet/vX.Y.Z`) and release. The credential options could not sit on `Client` without an interface to plug them into |
+| go-ethereum behind a build tag | Callers must know to pass `-tags`. A missing tag fails at link time with an unhelpful error, and CI has two builds to test |
+| `golang.org/x/crypto/sha3` + `github.com/decred/dcrd/dcrec/secp256k1/v4`, EIP-712 hand-encoded | The smallest (3 modules, +0.78 MB), but we would own the EIP-712 encoding |
 
-| Option | Modules a caller's go.mod gains | Market-data binary | Cost |
-| --- | --- | --- | --- |
-| go-ethereum in the root module | go-ethereum plus its graph (its go.mod lists 163 requirements) | not measured | cgo by default for secp256k1, a large module graph, and frequent releases for Dependabot to chase |
-| go-ethereum in a separate module (`nexus-exchange-go/wallet`) | none for market data | unchanged | a second module to version, tag (`wallet/vX.Y.Z`) and release, and the credential options could no longer sit on `Client` without an interface to plug them in |
-| go-ethereum behind a build tag | none unless the tag is set | unchanged | callers must know to pass `-tags`, and a missing tag fails at link time with an unhelpful error; two builds for CI to test |
-| **`golang.org/x/crypto/sha3` + `github.com/decred/dcrd/dcrec/secp256k1/v4`, EIP-712 by hand** | 3 (`secp256k1/v4`, `x/crypto`, `x/sys`) | 9.58 MB to 10.36 MB (+0.78 MB, +8%) | we own about 40 lines of EIP-712 encoding |
-
-These are the same two libraries go-ethereum itself uses for pure-Go
-signing, so they are not the less proven choice. Both are pure Go, and
-`secp256k1/v4` has one dependency of its own (`blake256`, which is not linked).
-
-EIP-712 by hand is small because the struct is fixed and every field is a
-static type: each encodes to one 32-byte word, with no arrays, nested structs
-or dynamic types. A general typed-data encoder (`apitypes`) buys nothing here.
+The first draft of this PR took the last option. On review, João asked for the
+industry-standard option.
 
 ## Decision
 
-Use `x/crypto/sha3` and decred's `secp256k1/v4` in the root module, with the
-EIP-191 and EIP-712 digests written in `internal/signing/eth.go`. No separate
-module and no build tag.
+Use go-ethereum in the root module. There is no separate module and no build
+tag:
 
-The +0.78 MB is mostly secp256k1's precomputed tables. It is the price of
-keeping one module and one `Client`; if a caller shows that it matters, the
-split to a separate module is still open, since everything is in `internal/`.
+- `crypto.Keccak256`, `crypto.Sign`, `crypto.SigToPub`, `crypto.ToECDSA` and
+  `crypto.GenerateKey` provide the key and signature primitives.
+- `accounts.TextHash` provides the EIP-191 digest.
+- `apitypes.TypedDataAndHash` provides the EIP-712 digest. It is the general
+  typed-data encoder, so no domain or struct encoding is written by hand.
+
+This is the industry-standard choice. go-ethereum is the reference Ethereum
+implementation in Go. It is audited, and it is what Go exchange SDKs and
+Ethereum tooling almost always sign with. With cgo on, its secp256k1 is
+bitcoin-core's libsecp256k1; with cgo off it falls back to the decred
+library. Both produce the same RFC 6979 signatures. A reviewer does not have
+to trust an encoder written for this SDK.
+
+## What it costs, measured
+
+Measured on 2026-09-25 with a program that only calls `NewClient(Testnet)` and
+`Markets` (darwin/amd64, Go 1.26, go-ethereum v1.17.6):
+
+| | Before wallet auth | x/crypto + decred (first draft) | go-ethereum, cgo on | go-ethereum, `CGO_ENABLED=0` |
+| --- | --- | --- | --- | --- |
+| Binary | 9.58 MB | 10.36 MB (+0.78) | 11.91 MB (+2.33, +24%) | 10.93 MB (+1.35, +14%) |
+| Third-party packages linked | 26 | 30 | 71 | |
+| Modules in the caller's graph (`go list -m all`) | 81 | | 236 | |
+
+`apitypes` accounts for most of the extra packages. It imports `core/types`,
+and that brings in go-ethereum's KZG and BLS12-381 code (gnark-crypto,
+go-eth-kzg, blst) even though no EIP-712 path uses them. With cgo on, blst
+compiles C. The module still builds and tests with `CGO_ENABLED=0`.
+
+That is the price of not owning the encoding. If a caller shows the size
+matters, splitting the wallet code into its own module is still open, since
+everything is in `internal/`.
 
 ## How it is held correct
 
 `internal/signing/eth_test.go` pins, byte for byte:
 
 - the EIP-191 sign-in signature and the legacy-domain EIP-712 registration
-  signature for the Hardhat #0 key, the vectors nexus-exchange-rs pins
-  against ethers v6 and nexus-exchange-py (eth-account) and nexus-exchange-ts
-  pin in turn;
-- the salted-domain `RegisterAgent` digest the server pins in
+  signature for the Hardhat #0 key. These are the vectors nexus-exchange-rs
+  pins against ethers v6, and that nexus-exchange-py (eth-account) and
+  nexus-exchange-ts pin in turn;
+- the salted-domain `RegisterAgent` digest that the server pins in
   `agent_store::tests::eip712_register_agent_digest_pinned` (alloy);
 - the per-network salts published in `x-nexus-networks`;
 - the three `agentAuth` vectors from the spec's `x-nexus-test-vectors`.
 
-A digest that drifts fails a test, not a user's registration.
+These vectors passed unchanged across the switch from the hand-written
+encoding to go-ethereum. Two independent implementations agreeing on them is
+the evidence that both are right.
 
 ## Consequences
 
-- A bug in the hand-written encoding is ours. The pinned vectors are the
-  guard, and adding a new signed struct means adding its vector first.
-- Dependabot tracks two small modules rather than go-ethereum's graph.
+- Dependabot tracks go-ethereum, which releases often. A go-ethereum bump that
+  changes a digest fails the pinned vectors, not a user's registration.
+- A new signed struct is a new `apitypes.TypedData` value plus its pinned
+  vector. No encoder changes.

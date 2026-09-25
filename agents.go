@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -101,8 +102,11 @@ func (c *Client) RegisterAgent(ctx context.Context, wallet, agent *PrivateKey, o
 	}
 	expMs, nonce := expires.UnixMilli(), now.UnixMilli()
 	agentAddr, _ := signing.ParseAddress(agent.Address()) // derived, so always valid
-	digest := signing.RegisterAgentDigest(registerChainID, signing.NetworkSalt(c.network.String()),
+	digest, err := signing.RegisterAgentDigest(registerChainID, signing.NetworkSalt(c.network.String()),
 		agentAddr, uint64(expMs), uint64(nonce))
+	if err != nil {
+		return nil, fmt.Errorf("nexus: RegisterAgent typed data: %w", err)
+	}
 	body := models.AgentRegistrationRequest{
 		Wallet:    wallet.Address(),
 		Agent:     agent.Address(),

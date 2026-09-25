@@ -84,7 +84,7 @@ func (v *fakeVenue) serve(w http.ResponseWriter, r *http.Request) {
 		var req models.AgentRegistrationRequest
 		_ = json.Unmarshal(body, &req)
 		agent, _ := signing.ParseAddress(req.Agent)
-		d := signing.RegisterAgentDigest(20056, signing.NetworkSalt("local"), agent, uint64(*req.ExpiresAt), uint64(req.Nonce))
+		d, _ := signing.RegisterAgentDigest(20056, signing.NetworkSalt("local"), agent, uint64(*req.ExpiresAt), uint64(req.Nonce))
 		addr, err := recoverHex(d, req.Signature)
 		if err != nil || addr != req.Wallet {
 			reply(401, map[string]string{"code": "signer_mismatch"})

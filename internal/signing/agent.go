@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/decred/dcrd/dcrec/secp256k1/v4"
+	"crypto/ecdsa"
 )
 
 // ErrAgentCannotWithdraw is returned, before any network I/O, for a request an
@@ -24,7 +24,7 @@ var ErrAgentCannotWithdraw = errors.New("nexus: agent keys trade, they do not wi
 // scheme: x-agent, x-timestamp, x-nonce, x-signature). It is safe for
 // concurrent use.
 type Agent struct {
-	key     *secp256k1.PrivateKey
+	key     *ecdsa.PrivateKey
 	address string
 	// Now is the clock the timestamp is read from; nil means time.Now.
 	Now func() time.Time
@@ -34,8 +34,8 @@ type Agent struct {
 }
 
 // NewAgent returns a signer for the agent key key.
-func NewAgent(key *secp256k1.PrivateKey) *Agent {
-	return &Agent{key: key, address: Address(key.PubKey())}
+func NewAgent(key *ecdsa.PrivateKey) *Agent {
+	return &Agent{key: key, address: Address(&key.PublicKey)}
 }
 
 // Address is the agent's address, sent as x-agent.
@@ -55,7 +55,7 @@ func AgentCanonical(method, path, query string, body []byte, tsMillis int64, non
 
 // SignAgent returns x-signature for canonical: 0x and the 65-byte signature
 // over raw keccak256(canonical), with no EIP-191 prefix.
-func SignAgent(key *secp256k1.PrivateKey, canonical string) string {
+func SignAgent(key *ecdsa.PrivateKey, canonical string) string {
 	return "0x" + hex.EncodeToString(SignHash(key, Keccak256([]byte(canonical))))
 }
 

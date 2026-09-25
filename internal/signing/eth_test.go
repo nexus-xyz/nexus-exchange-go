@@ -23,7 +23,7 @@ func TestAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := Address(k.PubKey()); got != anvilAddr {
+	if got := Address(&k.PublicKey); got != anvilAddr {
 		t.Fatalf("address = %s, want %s", got, anvilAddr)
 	}
 }
@@ -60,7 +60,10 @@ func TestRegisterAgentVectors(t *testing.T) {
 	// signature both.
 	k, _ := ParseKey(anvilKey)
 	agent, _ := ParseAddress("0x1234567890abcdef1234567890abcdef12345678")
-	d := RegisterAgentDigest(393, nil, agent, 1_782_000_000_000, 1)
+	d, err := RegisterAgentDigest(393, nil, agent, 1_782_000_000_000, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if got := hex.EncodeToString(d); got != "356e6f3d741f48279c78b228d4ed9217eb49ad9179d549c618215be57817bfd6" {
 		t.Fatalf("legacy digest = %s", got)
 	}
@@ -73,7 +76,9 @@ func TestRegisterAgentVectors(t *testing.T) {
 	// Salted domain, as the server verifies today: its own pinned digest
 	// (agent_store::tests::eip712_register_agent_digest_pinned, alloy).
 	agent, _ = ParseAddress("0xaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb")
-	d = RegisterAgentDigest(20056, NetworkSalt("testnet"), agent, 1_700_000_000, 1)
+	if d, err = RegisterAgentDigest(20056, NetworkSalt("testnet"), agent, 1_700_000_000, 1); err != nil {
+		t.Fatal(err)
+	}
 	if got := hex.EncodeToString(d); got != "5a52159bdde9c9ba6c1880598078c3326e8e32ea39c93425baafc76590d2a902" {
 		t.Fatalf("salted digest = %s", got)
 	}
