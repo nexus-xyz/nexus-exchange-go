@@ -82,6 +82,13 @@ stale, while an embedded file is read by the compiler on every build.
 `APIVersion` is a function rather than an exported variable so callers cannot
 reassign it.
 
+Docs never type a spec version number; they say "the pinned spec" and link
+`APIVersion`. `TestNoHandTypedSpecVersion` fails on a version number in the
+README or any hand-written Go file, examples included. The cost is that a
+claim such as "not in the pinned spec" re-points at the new release when the
+pin moves, so a PR that bumps `.api-version` greps for `pinned spec` and
+re-checks each claim against the new release.
+
 ## Releasing
 
 Releases use [release-please](https://github.com/googleapis/release-please),

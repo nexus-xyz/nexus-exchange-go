@@ -28,14 +28,16 @@ type APISecret struct {
 	key func() []byte
 }
 
-// NewAPISecret decodes secretHex, the hex text issued with the key (POST
-// /keys), into the raw bytes that requests are signed with; it returns an
-// error if secretHex is not hex or does not decode to 32 bytes.
+// NewAPISecret hex-decodes secretHex, the secret exactly as issued with the
+// key (POST /keys), because requests are signed with the decoded bytes and
+// never with the hex text (ENG-14662). It returns an error if secretHex is not
+// hex or does not decode to 32 bytes.
 //
-// Signing with the hex text itself is the classic failure (ENG-14662): every
-// signed call returns 401 and nothing says why. That is why this is the only
-// way to build an APISecret and why it takes the issued text, not bytes. A
-// leading "0x" is accepted, as the server's own key seeding accepts it.
+// Signing with the hex text itself is the classic failure: every signed call
+// returns 401, and the 401 is opaque by design, so nothing says why. That is
+// why this is the only way to build an APISecret and why it takes the issued
+// text, not bytes. A leading "0x" is accepted, as the server's own key seeding
+// accepts it.
 func NewAPISecret(secretHex string) (APISecret, error) {
 	b, err := hex.DecodeString(strings.TrimPrefix(secretHex, "0x"))
 	if err != nil {
@@ -92,7 +94,7 @@ var ErrAccountUnresolved = errors.New("nexus: could not resolve the account this
 // The route is GET /account/deposit-target, whose account field is the
 // HMAC-verified owner and which the indexer answers without the engine, so it
 // works while GET /account fails closed. It is a stand-in until a dedicated
-// GET /whoami lands (ENG-17767). It is not in the pinned spec (v0.8.1), so its
+// GET /whoami lands (ENG-17767). It is not in the pinned spec, so its
 // response is decoded by hand here.
 func (c *Client) ownerFromServer() func(context.Context) (string, error) {
 	var (

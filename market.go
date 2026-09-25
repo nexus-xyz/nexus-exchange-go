@@ -45,7 +45,7 @@ type (
 	Trade = models.Trade
 )
 
-// MarkPrice is a market's current mark price. The pinned spec (v0.8.1)
+// MarkPrice is a market's current mark price. The pinned spec ([APIVersion])
 // publishes only an example for this response, so the type is written here
 // from it; later specs name it MarkPriceResponse with the same two fields.
 type MarkPrice struct {
@@ -239,7 +239,7 @@ func (c *Client) Trades(ctx context.Context, marketID string, limit int) iter.Se
 // (GET /markets/{market_id}/candles). To read further back than one
 // response holds, use [Client.CandleHistory].
 //
-// StartTime and EndTime are not in the pinned spec (v0.8.1); the server
+// StartTime and EndTime are not in the pinned spec ([APIVersion]); the server
 // accepts them and later specs document them.
 func (c *Client) Candles(ctx context.Context, marketID string, p CandlesParams) ([]Candle, error) {
 	return getJSON[[]Candle](ctx, c, marketPath(marketID, "/candles"), p.query())
