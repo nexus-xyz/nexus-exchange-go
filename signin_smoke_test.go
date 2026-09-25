@@ -54,16 +54,9 @@ func TestTestnetSignIn(t *testing.T) {
 	}()
 
 	hc, _ := NewClient(Testnet, WithHMACAuth(key.KeyID, key.Secret))
-	// GET /account is engine-backed and fails closed with a 5xx while the
-	// engine is down; that is reported, not failed, since the indexer half of
-	// this test still means something then.
-	var apiErr *APIError
-	actx, acancel := context.WithTimeout(context.Background(), 20*time.Second) // GET retries 5xx
-	defer acancel()
-	if got, err := hc.AccountAddress(actx); errors.Is(err, context.DeadlineExceeded) ||
-		errors.As(err, &apiErr) && apiErr.StatusCode >= 500 {
-		t.Logf("AccountAddress with HMAC not checked, GET /account is down: %v", err)
-	} else if err != nil {
+	// Resolved through GET /account/deposit-target, which the indexer answers
+	// alone, so this holds even while the engine is down.
+	if got, err := hc.AccountAddress(ctx); err != nil {
 		t.Errorf("AccountAddress with HMAC: %v", err)
 	} else if got != wallet.Address() {
 		t.Errorf("AccountAddress with HMAC = %s, want %s", got, wallet.Address())

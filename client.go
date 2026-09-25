@@ -111,8 +111,12 @@ var ErrNoCredential = errors.New("nexus: client has no credential, so it acts fo
 //   - [WithAgent]: the owner wallet the agent was registered to, not the
 //     agent's own address, without a request.
 //   - [WithHMACAuth]: an API key does not carry its owner, so the first call
-//     asks the server (GET /account, which echoes it as owner) and the answer
-//     is kept for the life of the client.
+//     asks the server and the answer is kept for the life of the client. The
+//     route is GET /account/deposit-target, whose account field the indexer
+//     answers without the engine; it is a stand-in until GET /whoami lands
+//     (ENG-17767). If that route refuses (403 on an early-access deployment,
+//     503 on a misconfigured deposit target), the error matches
+//     [ErrAccountUnresolved] and wraps the [*APIError].
 func (c *Client) AccountAddress(ctx context.Context) (string, error) {
 	return c.account(ctx)
 }

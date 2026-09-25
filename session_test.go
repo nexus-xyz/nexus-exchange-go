@@ -32,6 +32,8 @@ type fakeVenue struct {
 	agents   map[string]string // agent -> owner
 	logins   int
 	requests []string
+	// depositStatus, when set, is how GET /account/deposit-target refuses.
+	depositStatus int
 }
 
 func newFakeVenue(t *testing.T, opts ...Option) (*fakeVenue, *Client) {
@@ -117,7 +119,14 @@ func (v *fakeVenue) serve(w http.ResponseWriter, r *http.Request) {
 	case "/keys":
 		reply(200, []map[string]string{{"key_id": v.hmacKey, "tier": "Pro"}})
 	case "/account":
-		reply(200, map[string]string{"owner": owner, "balance": "0"})
+		// Engine-backed, and down: the lookup must not depend on it.
+		reply(502, map[string]string{"code": "authoritative_margin_unavailable"})
+	case "/account/deposit-target":
+		if v.depositStatus != 0 {
+			reply(v.depositStatus, map[string]string{"code": "DEPOSIT_TARGET_MISCONFIGURED"})
+			return
+		}
+		reply(200, map[string]string{"mode": "testnet-faucet", "account": owner, "asset": "USDX"})
 	default:
 		if r.Method == http.MethodGet {
 			reply(200, []any{})
@@ -292,8 +301,61 @@ func TestAccountAddressEveryCredential(t *testing.T) {
 	if _, err := pub.AccountAddress(ctx); !errors.Is(err, ErrNoCredential) {
 		t.Errorf("keyless client: %v", err)
 	}
-	if n := strings.Count(strings.Join(v.requests, ","), "GET /account"); n != 1 {
-		t.Errorf("GET /account sent %d times, want 1", n)
+	// Two lookups, one request, and never the engine-backed GET /account.
+	sent := strings.Join(v.requests, ",")
+	if n := strings.Count(sent, "GET /account/deposit-target"); n != 1 {
+		t.Errorf("GET /account/deposit-target sent %d times, want 1", n)
+	}
+	if strings.Contains(sent, "GET /account,") || strings.HasSuffix(sent, "GET /account") {
+		t.Errorf("GET /account was used: %s", sent)
+	}
+}
+
+// Concurrent lookups on one HMAC client share one request.
+func TestAccountAddressConcurrent(t *testing.T) {
+	secret, _ := NewAPISecret(strings.Repeat("ab", 32))
+	v, c := newFakeVenue(t, WithHMACAuth("nx_test", secret))
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() {
+			if got, err := c.AccountAddress(context.Background()); err != nil || got != v.hmacOwnr {
+				t.Errorf("AccountAddress = %q, %v", got, err)
+			}
+		})
+	}
+	wg.Wait()
+	if n := v.count(); n != 1 {
+		t.Errorf("%d requests, want 1", n)
+	}
+}
+
+// A refusal from the stand-in route is a typed, explained error that still
+// reaches the APIError, and it is not cached.
+func TestAccountAddressRefused(t *testing.T) {
+	secret, _ := NewAPISecret(strings.Repeat("ab", 32))
+	for _, tc := range []struct {
+		status int
+		why    string
+	}{
+		{503, "misconfigured"},
+		{403, "early-access"},
+	} {
+		v, c := newFakeVenue(t, WithHMACAuth("nx_test", secret))
+		v.depositStatus = tc.status
+		got, err := c.AccountAddress(context.Background())
+		var apiErr *APIError
+		if got != "" || !errors.Is(err, ErrAccountUnresolved) || !errors.As(err, &apiErr) || apiErr.StatusCode != tc.status {
+			t.Fatalf("%d: AccountAddress = %q, %v", tc.status, got, err)
+		}
+		if !strings.Contains(err.Error(), tc.why) || !strings.Contains(err.Error(), "ENG-17767") {
+			t.Errorf("%d: error does not explain itself: %v", tc.status, err)
+		}
+		v.mu.Lock()
+		v.depositStatus = 0
+		v.mu.Unlock()
+		if got, err := c.AccountAddress(context.Background()); err != nil || got != v.hmacOwnr {
+			t.Errorf("%d: retry after refusal = %q, %v", tc.status, got, err)
+		}
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 
@@ -77,8 +78,22 @@ func WithHMACAuth(keyID string, secret APISecret) Option {
 	}
 }
 
-// ownerFromServer asks GET /account for the owner an API key maps to, once;
-// a failed lookup is not kept, so the next call asks again.
+// ErrAccountUnresolved is returned by [Client.AccountAddress] on a
+// [WithHMACAuth] client when the server answered but did not say which
+// account the key belongs to. The error text says why; when the server
+// refused, the [*APIError] is wrapped too and errors.As reaches it.
+var ErrAccountUnresolved = errors.New("nexus: could not resolve the account this API key belongs to")
+
+// ownerFromServer resolves the account an API key belongs to, once per
+// client: a key's owner never changes, so the answer is kept, while a failed
+// lookup is not, so the next call asks again. Concurrent callers share one
+// request.
+//
+// The route is GET /account/deposit-target, whose account field is the
+// HMAC-verified owner and which the indexer answers without the engine, so it
+// works while GET /account fails closed. It is a stand-in until a dedicated
+// GET /whoami lands (ENG-17767). It is not in the pinned spec (v0.8.1), so its
+// response is decoded by hand here.
 func (c *Client) ownerFromServer() func(context.Context) (string, error) {
 	var (
 		mu    sync.Mutex
@@ -91,15 +106,26 @@ func (c *Client) ownerFromServer() func(context.Context) (string, error) {
 			return owner, nil
 		}
 		var out struct {
-			Owner string `json:"owner"`
+			Account string `json:"account"`
 		}
-		if err := c.t.Get(ctx, "/account", nil, &out); err != nil {
+		err := c.t.Get(ctx, "/account/deposit-target", nil, &out)
+		var apiErr *APIError
+		switch {
+		case errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusForbidden:
+			return "", fmt.Errorf("%w: the stand-in route GET /account/deposit-target refused this account "+
+				"(this deployment limits funding to early-access accounts, and the route shares that gate) "+
+				"until GET /whoami lands (ENG-17767): %w", ErrAccountUnresolved, err)
+		case errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusServiceUnavailable:
+			return "", fmt.Errorf("%w: the stand-in route GET /account/deposit-target is unavailable "+
+				"(the deployment's deposit target is misconfigured, which fails the whole route) "+
+				"until GET /whoami lands (ENG-17767): %w", ErrAccountUnresolved, err)
+		case err != nil:
 			return "", err
 		}
-		if out.Owner == "" {
-			return "", errors.New("nexus: GET /account did not echo the owner address")
+		if _, perr := signing.ParseAddress(out.Account); perr != nil {
+			return "", fmt.Errorf("%w: GET /account/deposit-target returned no valid account address", ErrAccountUnresolved)
 		}
-		owner = strings.ToLower(out.Owner)
+		owner = strings.ToLower(out.Account)
 		return owner, nil
 	}
 }
