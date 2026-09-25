@@ -107,12 +107,12 @@ func TestOperationsOnTheWire(t *testing.T) {
 		{"cancelAllOrders market", "[]", "DELETE", "/orders?market_id=ETH-USDX-PERP", "",
 			func(c *Client) error { _, err := c.CancelAllOrders(ctx, "ETH-USDX-PERP"); return err }},
 		{"fetchOrder", orderJSON, "GET", "/orders/o1?market_id=BTC-USDX-PERP", "",
-			func(c *Client) error { _, err := c.Order(ctx, "o1", "BTC-USDX-PERP"); return err }},
+			func(c *Client) error { _, err := c.FetchOrder(ctx, "o1", "BTC-USDX-PERP"); return err }},
 		{"fetchOpenOrders", "[" + orderJSON + "]", "GET", "/orders", "",
-			func(c *Client) error { _, err := c.OpenOrders(ctx); return err }},
+			func(c *Client) error { _, err := c.FetchOpenOrders(ctx); return err }},
 		{"fetchOrderHistory", `[{"id":"o1","status":"Filled","price":null}]`, "GET", "/orders/history?cursor=c0&limit=50", "",
 			func(c *Client) error {
-				h, next, err := c.OrderHistory(ctx, Page{Limit: 50, Cursor: "c0"})
+				h, next, err := c.FetchOrders(ctx, Page{Limit: 50, Cursor: "c0"})
 				if err == nil && (next != "next-1" || len(h) != 1 || !h[0].Price.IsNull()) {
 					t.Errorf("history = %+v, next %q", h, next)
 				}
@@ -120,7 +120,7 @@ func TestOperationsOnTheWire(t *testing.T) {
 			}},
 		{"fetchFills", `[{"id":"f1","price":"84250.00","size":"0.01","fee":"0.84","taker_or_maker":"taker"}]`, "GET", "/fills", "",
 			func(c *Client) error {
-				f, next, err := c.Fills(ctx, Page{})
+				f, next, err := c.FetchMyTrades(ctx, Page{})
 				if err == nil && (next != "next-1" || f[0].Fee.String() != "0.84") {
 					t.Errorf("fills = %+v, next %q", f, next)
 				}
@@ -128,7 +128,7 @@ func TestOperationsOnTheWire(t *testing.T) {
 			}},
 		{"fetchBalance", `{"balance":"1000.00","equity":"1012.34","positions":[]}`, "GET", "/account", "",
 			func(c *Client) error {
-				a, err := c.Account().Balance(ctx)
+				a, err := c.Account().FetchBalance(ctx)
 				if err == nil && a.Equity.String() != "1012.34" {
 					t.Errorf("balance = %+v", a)
 				}
@@ -136,14 +136,14 @@ func TestOperationsOnTheWire(t *testing.T) {
 			}},
 		{"fetchPositions", `[{"market_id":"BTC-USDX-PERP","side":"Long","size":"0.5","roe":null,"roe_error":"mark_unavailable"}]`, "GET", "/positions", "",
 			func(c *Client) error {
-				p, err := c.Positions(ctx)
+				p, err := c.FetchPositions(ctx)
 				if err == nil && (!p[0].Roe.IsNull() || p[0].RoeError.MustGet() != "mark_unavailable") {
 					t.Errorf("positions = %+v", p)
 				}
 				return err
 			}},
 		{"fetchCancelOnDisconnect", `{"enabled":false,"active":false,"grace_secs":null}`, "GET", "/account/cancel-on-disconnect", "",
-			func(c *Client) error { _, err := c.Account().CancelOnDisconnect(ctx); return err }},
+			func(c *Client) error { _, err := c.Account().FetchCancelOnDisconnect(ctx); return err }},
 		{"setCancelOnDisconnect", `{"enabled":true,"active":true,"grace_secs":10}`, "PUT", "/account/cancel-on-disconnect", `{"enabled":true}`,
 			func(c *Client) error {
 				s, err := c.Account().SetCancelOnDisconnect(ctx, true)
@@ -189,7 +189,7 @@ func TestMutationsNeverRetried(t *testing.T) {
 	ctx := context.Background()
 	for name, call := range map[string]func(*Client) error{
 		"create": func(c *Client) error { _, err := c.CreateOrder(ctx, OrderRequest{}); return err },
-		"batch":  func(c *Client) error { _, err := c.CreateOrdersBatch(ctx, []OrderRequest{{}}); return err },
+		"batch":  func(c *Client) error { _, err := c.CreateOrders(ctx, []OrderRequest{{}}); return err },
 		"edit":   func(c *Client) error { _, err := c.EditOrder(ctx, "o1", "m", AmendOrderRequest{}); return err },
 		"cancel": func(c *Client) error { _, err := c.CancelOrder(ctx, "o1", "m"); return err },
 		"cancelAll": func(c *Client) error {
@@ -309,7 +309,7 @@ func TestBatchIsPassThrough(t *testing.T) {
 	}
 	c, got := recorder(t, 201, `[{"outcome":"ok","order":`+orderJSON+`,"fills":[]},`+
 		`{"outcome":"err","error":"insufficient_margin","message":"no"}]`)
-	res, err := c.CreateOrdersBatch(context.Background(), reqs)
+	res, err := c.CreateOrders(context.Background(), reqs)
 	if err != nil {
 		t.Fatal(err)
 	}

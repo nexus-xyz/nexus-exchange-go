@@ -62,7 +62,7 @@ func (c StreamChannel) String() string { return c.kind + ":" + c.market }
 //     so a jump is not a lost update.
 //   - Loss is reported, not replayed: [Gap] says the server dropped frames for
 //     this connection. Books heal on the next snapshot (or re-read
-//     [Client.OrderBook]); trades do not, so re-read [Client.Trades].
+//     [Client.FetchOrderBook]); trades do not, so re-read [Client.FetchTrades].
 //
 // On the public hosts the load balancer ends every socket about 30s after the
 // upgrade. That is routine: Next returns [Disconnected], then [Reconnected].
@@ -74,7 +74,7 @@ type MarketStream struct{ s socket }
 // [Unrecognized].
 type (
 	// BookLevel is one level of a [BookSnapshot]: an object on this socket,
-	// unlike the [price, amount] pairs of [Client.OrderBook].
+	// unlike the [price, amount] pairs of [Client.FetchOrderBook].
 	BookLevel struct {
 		Price      Decimal `json:"price"`
 		Quantity   Decimal `json:"quantity"`
