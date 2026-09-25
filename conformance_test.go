@@ -200,61 +200,61 @@ func TestGoDriftBothWays(t *testing.T) {
 // unmeasured is every exported REST-surface method the lane does not call,
 // with the reason.
 var unmeasured = map[string]string{
-	"Client.Account":        "groups the Account methods, which are rows; sends nothing",
-	"Client.AccountAddress": "reads GET /account/deposit-target, outside the v1 surface; TestTestnetSignIn checks it",
-	"Client.CandleHistory":  "pages fetchOHLCV, which Client.Candles measures; TestTestnetCandleHistory walks it",
-	"Client.MarketStream":   "WebSocket: the spec declares no frame schema to join against",
-	"Client.Subscribe":      "WebSocket: the spec declares no frame schema to join against",
-	"Client.SignIn":         "wallet-signed sign-in; TestTestnetSignIn drives it",
-	"Client.CreateAPIKey":   "session auth (bearerAuth), which an API key cannot drive; TestTestnetSignIn does",
-	"Client.APIKeys":        "session auth (bearerAuth), which an API key cannot drive; TestTestnetSignIn does",
-	"Client.DeleteAPIKey":   "session auth (bearerAuth), which an API key cannot drive; TestTestnetSignIn does",
-	"Client.RegisterAgent":  "wallet-signed registration; TestTestnetSignIn drives it",
-	"Client.RevokeAgent":    "needs an agent the run registered; TestTestnetSignIn drives it",
+	"Client.Account":           "groups the Account methods, which are rows; sends nothing",
+	"Client.AccountAddress":    "reads GET /account/deposit-target, outside the v1 surface; TestTestnetLogin checks it",
+	"Client.FetchOHLCVHistory": "pages fetchOHLCV, which Client.FetchOHLCV measures; TestTestnetFetchOHLCVHistory walks it",
+	"Client.MarketStream":      "WebSocket: the spec declares no frame schema to join against",
+	"Client.Subscribe":         "WebSocket: the spec declares no frame schema to join against",
+	"Client.Login":             "wallet-signed sign-in; TestTestnetLogin drives it",
+	"Client.CreateAPIKey":      "session auth (bearerAuth), which an API key cannot drive; TestTestnetLogin does",
+	"Client.FetchAPIKeys":      "session auth (bearerAuth), which an API key cannot drive; TestTestnetLogin does",
+	"Client.DeleteAPIKey":      "session auth (bearerAuth), which an API key cannot drive; TestTestnetLogin does",
+	"Client.RegisterAgent":     "wallet-signed registration; TestTestnetLogin drives it",
+	"Client.RevokeAgent":       "needs an agent the run registered; TestTestnetLogin drives it",
 }
 
 // laneOps is the lane, in run order. Tier (public or private) is not written
 // here: it comes from each operation's security in the pinned spec.
 func laneOps(c *Client, market string, w *writeTier) []conformance.Op {
 	ops := []conformance.Op{
-		{ID: "fetchStatus", Method: "Client.Status", Call: call(func(ctx context.Context) (any, error) { return c.Status(ctx) })},
-		{ID: "fetchStats", Method: "Client.Stats", Call: call(func(ctx context.Context) (any, error) { return c.Stats(ctx) })},
-		{ID: "fetchStatsHistory", Method: "Client.StatsHistory", Call: call(func(ctx context.Context) (any, error) { return c.StatsHistory(ctx) })},
-		{ID: "fetchMarkets", Method: "Client.Markets", Call: call(func(ctx context.Context) (any, error) { return c.Markets(ctx) })},
-		{ID: "fetchMarketsSummary", Method: "Client.MarketsSummary", Call: call(func(ctx context.Context) (any, error) { return c.MarketsSummary(ctx) })},
-		{ID: "fetchMarkPrice", Method: "Client.MarkPrice", Call: call(func(ctx context.Context) (any, error) { return c.MarkPrice(ctx, market) })},
-		{ID: "fetchMarketRiskParams", Method: "Client.MarketRiskParams", Call: call(func(ctx context.Context) (any, error) { return c.MarketRiskParams(ctx, market) })},
-		{ID: "fetchMarketStatus", Method: "Client.MarketStatus", Call: call(func(ctx context.Context) (any, error) { return c.MarketStatus(ctx, market) })},
-		{ID: "fetchTickers", Method: "Client.Tickers", Call: call(func(ctx context.Context) (any, error) { return c.Tickers(ctx) })},
-		{ID: "fetchTicker", Method: "Client.Ticker", Call: call(func(ctx context.Context) (any, error) { return c.Ticker(ctx, market) })},
-		{ID: "fetchOrderBook", Method: "Client.OrderBook", Call: call(func(ctx context.Context) (any, error) { return c.OrderBook(ctx, market) })},
-		{ID: "fetchTrades", Method: "Client.Trades", Call: func(ctx context.Context) error {
-			for _, err := range c.Trades(ctx, market, 5) {
+		{ID: "fetchStatus", Method: "Client.FetchStatus", Call: call(func(ctx context.Context) (any, error) { return c.FetchStatus(ctx) })},
+		{ID: "fetchStats", Method: "Client.FetchStats", Call: call(func(ctx context.Context) (any, error) { return c.FetchStats(ctx) })},
+		{ID: "fetchStatsHistory", Method: "Client.FetchStatsHistory", Call: call(func(ctx context.Context) (any, error) { return c.FetchStatsHistory(ctx) })},
+		{ID: "fetchMarkets", Method: "Client.FetchMarkets", Call: call(func(ctx context.Context) (any, error) { return c.FetchMarkets(ctx) })},
+		{ID: "fetchMarketsSummary", Method: "Client.FetchMarketsSummary", Call: call(func(ctx context.Context) (any, error) { return c.FetchMarketsSummary(ctx) })},
+		{ID: "fetchMarkPrice", Method: "Client.FetchMarkPrice", Call: call(func(ctx context.Context) (any, error) { return c.FetchMarkPrice(ctx, market) })},
+		{ID: "fetchMarketRiskParams", Method: "Client.FetchMarketRiskParams", Call: call(func(ctx context.Context) (any, error) { return c.FetchMarketRiskParams(ctx, market) })},
+		{ID: "fetchMarketStatus", Method: "Client.FetchMarketStatus", Call: call(func(ctx context.Context) (any, error) { return c.FetchMarketStatus(ctx, market) })},
+		{ID: "fetchTickers", Method: "Client.FetchTickers", Call: call(func(ctx context.Context) (any, error) { return c.FetchTickers(ctx) })},
+		{ID: "fetchTicker", Method: "Client.FetchTicker", Call: call(func(ctx context.Context) (any, error) { return c.FetchTicker(ctx, market) })},
+		{ID: "fetchOrderBook", Method: "Client.FetchOrderBook", Call: call(func(ctx context.Context) (any, error) { return c.FetchOrderBook(ctx, market) })},
+		{ID: "fetchTrades", Method: "Client.FetchTrades", Call: func(ctx context.Context) error {
+			for _, err := range c.FetchTrades(ctx, market, 5) {
 				return err // one page is the measurement
 			}
 			return nil
 		}},
-		{ID: "fetchOHLCV", Method: "Client.Candles", Call: call(func(ctx context.Context) (any, error) {
-			return c.Candles(ctx, market, CandlesParams{Timeframe: "1m", Limit: 5})
+		{ID: "fetchOHLCV", Method: "Client.FetchOHLCV", Call: call(func(ctx context.Context) (any, error) {
+			return c.FetchOHLCV(ctx, market, CandlesParams{Timeframe: "1m", Limit: 5})
 		})},
-		{ID: "fetchFunding", Method: "Client.Funding", Call: call(func(ctx context.Context) (any, error) { return c.Funding(ctx, market, 5) })},
-		{ID: "fetchFundingSamples", Method: "Client.FundingSamples", Call: call(func(ctx context.Context) (any, error) { return c.FundingSamples(ctx, market, 5) })},
-		{ID: "fetchAdlEvents", Method: "Client.AdlEvents", Call: call(func(ctx context.Context) (any, error) { return c.AdlEvents(ctx, market, 5) })},
-		{ID: "fetchAccountFunding", Method: "Client.AccountFunding", Call: call(func(ctx context.Context) (any, error) { return c.AccountFunding(ctx, 5) })},
-		{ID: "fetchBalance", Method: "Account.Balance", Call: call(func(ctx context.Context) (any, error) { return c.Account().Balance(ctx) })},
-		{ID: "fetchPositions", Method: "Client.Positions", Call: call(func(ctx context.Context) (any, error) { return c.Positions(ctx) })},
-		{ID: "fetchOpenOrders", Method: "Client.OpenOrders", Call: call(func(ctx context.Context) (any, error) { return c.OpenOrders(ctx) })},
-		{ID: "fetchOrderHistory", Method: "Client.OrderHistory", Call: func(ctx context.Context) error {
-			_, _, err := c.OrderHistory(ctx, Page{Limit: 5})
+		{ID: "fetchFunding", Method: "Client.FetchFundingRateHistory", Call: call(func(ctx context.Context) (any, error) { return c.FetchFundingRateHistory(ctx, market, 5) })},
+		{ID: "fetchFundingSamples", Method: "Client.FetchFundingSamples", Call: call(func(ctx context.Context) (any, error) { return c.FetchFundingSamples(ctx, market, 5) })},
+		{ID: "fetchAdlEvents", Method: "Client.FetchAdlEvents", Call: call(func(ctx context.Context) (any, error) { return c.FetchAdlEvents(ctx, market, 5) })},
+		{ID: "fetchAccountFunding", Method: "Client.FetchFundingHistory", Call: call(func(ctx context.Context) (any, error) { return c.FetchFundingHistory(ctx, 5) })},
+		{ID: "fetchBalance", Method: "Account.FetchBalance", Call: call(func(ctx context.Context) (any, error) { return c.Account().FetchBalance(ctx) })},
+		{ID: "fetchPositions", Method: "Client.FetchPositions", Call: call(func(ctx context.Context) (any, error) { return c.FetchPositions(ctx) })},
+		{ID: "fetchOpenOrders", Method: "Client.FetchOpenOrders", Call: call(func(ctx context.Context) (any, error) { return c.FetchOpenOrders(ctx) })},
+		{ID: "fetchOrderHistory", Method: "Client.FetchOrders", Call: func(ctx context.Context) error {
+			_, _, err := c.FetchOrders(ctx, Page{Limit: 5})
 			return err
 		}},
-		{ID: "fetchFills", Method: "Client.Fills", Call: func(ctx context.Context) error {
-			_, _, err := c.Fills(ctx, Page{Limit: 5})
+		{ID: "fetchFills", Method: "Client.FetchMyTrades", Call: func(ctx context.Context) error {
+			_, _, err := c.FetchMyTrades(ctx, Page{Limit: 5})
 			return err
 		}},
-		{ID: "listAgents", Method: "Client.Agents", Call: call(func(ctx context.Context) (any, error) { return c.Agents(ctx) })},
-		{ID: "fetchCancelOnDisconnect", Method: "Account.CancelOnDisconnect", Call: func(ctx context.Context) error {
-			s, err := c.Account().CancelOnDisconnect(ctx)
+		{ID: "listAgents", Method: "Client.FetchAgents", Call: call(func(ctx context.Context) (any, error) { return c.FetchAgents(ctx) })},
+		{ID: "fetchCancelOnDisconnect", Method: "Account.FetchCancelOnDisconnect", Call: func(ctx context.Context) error {
+			s, err := c.Account().FetchCancelOnDisconnect(ctx)
 			if err == nil && w != nil {
 				w.cod = &s.Enabled
 			}
@@ -276,8 +276,8 @@ func laneOps(c *Client, market string, w *writeTier) []conformance.Op {
 			}
 			return nil
 		})},
-		{ID: "fetchOrder", Method: "Client.Order", Write: true, Call: w.onPlaced(func(ctx context.Context) error {
-			_, err := c.Order(ctx, w.placed, market)
+		{ID: "fetchOrder", Method: "Client.FetchOrder", Write: true, Call: w.onPlaced(func(ctx context.Context) error {
+			_, err := c.FetchOrder(ctx, w.placed, market)
 			return err
 		})},
 		{ID: "editOrder", Method: "Client.EditOrder", Write: true, Call: w.onPlaced(func(ctx context.Context) error {
@@ -291,8 +291,8 @@ func laneOps(c *Client, market string, w *writeTier) []conformance.Op {
 			_, err := c.CancelOrder(ctx, w.placed, market)
 			return err
 		})},
-		{ID: "createOrdersBatch", Method: "Client.CreateOrdersBatch", Write: true, Call: w.step(func(ctx context.Context) error {
-			_, err := c.CreateOrdersBatch(ctx, []OrderRequest{w.req})
+		{ID: "createOrdersBatch", Method: "Client.CreateOrders", Write: true, Call: w.step(func(ctx context.Context) error {
+			_, err := c.CreateOrders(ctx, []OrderRequest{w.req})
 			return err
 		})},
 		{ID: "setCancelOnDisconnect", Method: "Account.SetCancelOnDisconnect", Write: true, Call: w.step(func(ctx context.Context) error {
@@ -359,11 +359,11 @@ func (w *writeTier) prepare(ctx context.Context, c *Client) error {
 	// It fails once the day's allowance is claimed, which a funded account
 	// does not mind; a real funding gap shows up as createOrder failing.
 	_ = c.t.Send(ctx, http.MethodPost, "/account/credit", nil, nil)
-	mark, err := c.MarkPrice(ctx, w.market)
+	mark, err := c.FetchMarkPrice(ctx, w.market)
 	if err != nil {
 		return fmt.Errorf("mark price: %w", err)
 	}
-	markets, err := c.Markets(ctx)
+	markets, err := c.FetchMarkets(ctx)
 	if err != nil {
 		return fmt.Errorf("markets: %w", err)
 	}
