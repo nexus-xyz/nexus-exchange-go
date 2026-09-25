@@ -136,7 +136,7 @@ type quoter struct {
 }
 
 func newQuoter(ctx context.Context, c *nexus.Client, market string, offset int64) (*quoter, error) {
-	markets, err := c.Markets(ctx)
+	markets, err := c.FetchMarkets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("read markets: %w", err)
 	}
@@ -182,7 +182,7 @@ func (q *quoter) requote(ctx context.Context, b nexus.BookSnapshot) {
 	}
 
 	// One request for both quotes: a batch of up to 39 costs one unit.
-	results, err := q.c.CreateOrdersBatch(ctx, reqs)
+	results, err := q.c.CreateOrders(ctx, reqs)
 	if err != nil {
 		log.Printf("place quotes: %v", err)
 		return
@@ -251,7 +251,7 @@ func (q *quoter) shutdown(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("shutdown: cancel all in %s: %w", q.market, err)
 	}
-	open, err := q.c.OpenOrders(ctx)
+	open, err := q.c.FetchOpenOrders(ctx)
 	if err != nil {
 		return fmt.Errorf("shutdown: read open orders: %w", err)
 	}

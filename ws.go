@@ -154,9 +154,9 @@ type (
 	// OutOfSync says the server could not replay Channel's missed events, so
 	// the local view of it is stale. Do not continue past it: the SDK has
 	// already subscribed Channel again from the live edge, and the state must
-	// be re-read over REST: orders [Client.OpenOrders], fills [Client.Fills],
-	// positions [Client.Positions], balances [Account.Balance], book
-	// [Client.OrderBook], trades [Client.Trades], candles [Client.Candles].
+	// be re-read over REST: orders [Client.FetchOpenOrders], fills [Client.FetchMyTrades],
+	// positions [Client.FetchPositions], balances [Account.FetchBalance], book
+	// [Client.FetchOrderBook], trades [Client.FetchTrades], candles [Client.FetchOHLCV].
 	// liquidations has no REST read. OldestSeq is the oldest seq the server
 	// still holds, 0 when it holds none.
 	OutOfSync struct {

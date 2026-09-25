@@ -154,11 +154,11 @@ func testKey(t *testing.T) *PrivateKey {
 }
 
 // Sign-in, then a session read, verified server-side.
-func TestSignInSessionRead(t *testing.T) {
+func TestLoginSessionRead(t *testing.T) {
 	ctx := context.Background()
 	wallet := testKey(t)
 	_, pub := newFakeVenue(t)
-	sess, err := pub.SignIn(ctx, wallet)
+	sess, err := pub.Login(ctx, wallet)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +171,7 @@ func TestSignInSessionRead(t *testing.T) {
 	_, c := newFakeVenue(t, WithSession(sess))
 	// A fresh venue does not know this token: its 401 is the server's, and
 	// it is not a session expiry.
-	if _, err := c.APIKeys(ctx); !errors.Is(err, ErrUnauthorized) || errors.Is(err, ErrSessionExpired) {
+	if _, err := c.FetchAPIKeys(ctx); !errors.Is(err, ErrUnauthorized) || errors.Is(err, ErrSessionExpired) {
 		t.Fatalf("unknown token: %v", err)
 	}
 }
@@ -181,17 +181,17 @@ func TestSignInSessionRead(t *testing.T) {
 func TestSessionExpiryIsLocal(t *testing.T) {
 	ctx := context.Background()
 	v, pub := newFakeVenue(t)
-	sess, err := pub.SignIn(ctx, testKey(t))
+	sess, err := pub.Login(ctx, testKey(t))
 	if err != nil {
 		t.Fatal(err)
 	}
 	c, _ := NewClient(Local, WithHTTPClient(http.DefaultClient), WithSession(sess))
-	if _, err := c.APIKeys(ctx); err != nil {
+	if _, err := c.FetchAPIKeys(ctx); err != nil {
 		t.Fatalf("live session: %v", err)
 	}
 	c.clock = func() time.Time { return sess.ExpiresAt().Add(-30 * time.Second) } // inside the margin
 	sent, start := v.count(), time.Now()
-	_, err = c.APIKeys(ctx)
+	_, err = c.FetchAPIKeys(ctx)
 	// A GET retries with at least 50ms of backoff; a local refusal must not.
 	if time.Since(start) > 40*time.Millisecond {
 		t.Errorf("local refusal took %v: was it retried?", time.Since(start))
@@ -215,7 +215,7 @@ func TestWalletRefreshesSession(t *testing.T) {
 	wallet := testKey(t)
 	v, c := newFakeVenue(t, WithWallet(wallet))
 	for range 2 {
-		if _, err := c.APIKeys(ctx); err != nil {
+		if _, err := c.FetchAPIKeys(ctx); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -223,7 +223,7 @@ func TestWalletRefreshesSession(t *testing.T) {
 		t.Fatalf("logins = %d, want 1", v.logins)
 	}
 	c.clock = func() time.Time { return time.Now().Add(sessionTTL) }
-	if _, err := c.APIKeys(ctx); err != nil {
+	if _, err := c.FetchAPIKeys(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if v.logins != 2 {
@@ -248,7 +248,7 @@ func TestAgentTradesButCannotWithdraw(t *testing.T) {
 		t.Fatalf("agent expires in %v, want the 30 day default", d)
 	}
 	c, _ := NewClient(Local, WithHTTPClient(http.DefaultClient), WithAgent(agent))
-	if _, err := c.OpenOrders(ctx); err != nil {
+	if _, err := c.FetchOpenOrders(ctx); err != nil {
 		t.Fatalf("agent read: %v", err)
 	}
 	if _, err := c.CreateOrder(ctx, OrderRequest{MarketId: "BTC-USDX-PERP", Side: Buy, OrderType: OrderTypeLimit}); err != nil {
@@ -271,7 +271,7 @@ func TestAccountAddressEveryCredential(t *testing.T) {
 	ctx := context.Background()
 	wallet, agentKey := testKey(t), testKey(t)
 	v, pub := newFakeVenue(t)
-	sess, err := pub.SignIn(ctx, wallet)
+	sess, err := pub.Login(ctx, wallet)
 	if err != nil {
 		t.Fatal(err)
 	}

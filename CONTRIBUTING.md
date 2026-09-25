@@ -65,6 +65,23 @@ Which operations get models, and how types map, is
 `go get -modfile=tools.mod -tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@<version>`,
 then regenerate.
 
+## Conformance lane
+
+`TestConformance` calls every REST method against testnet and joins what it
+decoded against the pinned spec, printing `called` and `measured` as separate
+numbers: an empty answer is never a pass. It runs nightly
+(`conformance.yml`) and on demand:
+
+```sh
+NEXUS_CONFORMANCE=1 go test -run '^TestConformance$' -v .
+```
+
+Without `NEXUS_CONFORMANCE_KEY_ID` / `NEXUS_CONFORMANCE_KEY_SECRET` the private
+rows are skipped and nothing is sent for them. The other switches are in the
+test's doc comment. A new exported method on `Client` or `Account` needs a row
+in `laneOps` or a reason in `unmeasured`; `go test ./...` fails until it has
+one.
+
 ## API version
 
 `.api-version` pins the released

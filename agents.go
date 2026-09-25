@@ -24,7 +24,7 @@ const registerChainID = 20056
 // server accepts [now+1d, now+90d].
 const defaultAgentTTL = 30 * 24 * time.Hour
 
-// AgentInfo is one registered agent from [Client.Agents]. Its fields are
+// AgentInfo is one registered agent from [Client.FetchAgents]. Its fields are
 // camelCase on the wire (expiresAt, registeredAt), unlike its neighbours.
 type AgentInfo = models.AgentInfo
 
@@ -79,7 +79,7 @@ type RegisterAgentOptions struct {
 	// ExpiresAt is when the agent lapses; zero means 30 days from now. The
 	// server accepts 1 to 90 days ahead.
 	ExpiresAt time.Time
-	// Label names the agent in [Client.Agents]. It is not signed.
+	// Label names the agent in [Client.FetchAgents]. It is not signed.
 	Label string
 }
 
@@ -134,10 +134,10 @@ func (c *Client) RegisterAgent(ctx context.Context, wallet, agent *PrivateKey, o
 	return a, nil
 }
 
-// Agents lists the account's unexpired agents (GET /agents). The server
+// FetchAgents lists the account's unexpired agents (GET /agents). The server
 // refuses an agent-signed request here (AGENT_KEY_FORBIDDEN); use the API key
 // or wallet session.
-func (c *Client) Agents(ctx context.Context) ([]AgentInfo, error) {
+func (c *Client) FetchAgents(ctx context.Context) ([]AgentInfo, error) {
 	var out []AgentInfo
 	if err := c.t.Get(ctx, "/agents", nil, &out); err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func (c *Client) Agents(ctx context.Context) ([]AgentInfo, error) {
 }
 
 // RevokeAgent revokes an agent at once (DELETE /agents/{address}); requests
-// it signed are refused from then on. Like [Client.Agents] it needs the API
+// it signed are refused from then on. Like [Client.FetchAgents] it needs the API
 // key or wallet session, not an agent.
 func (c *Client) RevokeAgent(ctx context.Context, address string) error {
 	return c.t.Send(ctx, http.MethodDelete, "/agents/"+url.PathEscape(address), nil, nil)

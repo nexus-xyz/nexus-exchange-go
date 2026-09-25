@@ -142,7 +142,7 @@ func WithSession(s *Session) Option {
 	return func(cfg *config) {
 		cfg.creds = append(cfg.creds, func(c *Client) error {
 			if s == nil {
-				return errors.New("nexus: WithSession needs a session from Client.SignIn")
+				return errors.New("nexus: WithSession needs a session from Client.Login")
 			}
 			c.t.Signer = &bearer{now: c.now, session: s}
 			c.account = func(context.Context) (string, error) { return s.Address(), nil }
@@ -162,7 +162,7 @@ func WithWallet(wallet *PrivateKey) Option {
 				return errors.New("nexus: WithWallet needs a key from NewPrivateKey")
 			}
 			c.t.Signer = &bearer{now: c.now, signIn: func(ctx context.Context) (*Session, error) {
-				return c.SignIn(ctx, wallet)
+				return c.Login(ctx, wallet)
 			}}
 			c.account = func(context.Context) (string, error) { return wallet.Address(), nil }
 			return nil

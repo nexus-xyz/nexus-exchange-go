@@ -7,7 +7,7 @@
 // Pick a price well away from the market so the order rests: post-only means
 // the exchange rejects it rather than let it take liquidity. The price and
 // quantity must be multiples of the market's tick_size and lot_size (see
-// Client.Markets).
+// Client.FetchMarkets).
 package main
 
 import (
@@ -65,7 +65,7 @@ func run(ctx context.Context, market, price, quantity string) error {
 	})
 	if err != nil {
 		// Sent once, never retried: on a timeout the order may still exist.
-		// Check OpenOrders before placing it again.
+		// Check FetchOpenOrders before placing it again.
 		return fmt.Errorf("place: %w", err)
 	}
 	if placed.Order == nil || placed.Order.Id == nil {

@@ -34,54 +34,60 @@ func TestPublicOperations(t *testing.T) {
 		name, uri, body string
 		call            func(*Client) error
 	}{
-		{"Markets", "/markets", `[{"market_id":"BTC-USDX-PERP","tick_size":"0.5"}]`,
+		{"FetchMarkets", "/markets", `[{"market_id":"BTC-USDX-PERP","tick_size":"0.5"}]`,
 			func(c *Client) error {
-				v, err := c.Markets(ctx)
+				v, err := c.FetchMarkets(ctx)
 				return want(err, len(v) == 1 && v[0].TickSize.String() == "0.5")
 			}},
-		{"MarketsSummary", "/markets/summary", `[{"market_id":"BTC-USDX-PERP","last_trade_price":null,"volume_24h":0.0}]`,
-			func(c *Client) error { v, err := c.MarketsSummary(ctx); return want(err, len(v) == 1) }},
-		{"MarkPrice", "/markets/BTC-USDX-PERP/mark-price", `{"market_id":"BTC-USDX-PERP","mark_price":"50011.60"}`,
+		{"FetchMarketsSummary", "/markets/summary", `[{"market_id":"BTC-USDX-PERP","last_trade_price":null,"volume_24h":0.0}]`,
+			func(c *Client) error { v, err := c.FetchMarketsSummary(ctx); return want(err, len(v) == 1) }},
+		{"FetchMarkPrice", "/markets/BTC-USDX-PERP/mark-price", `{"market_id":"BTC-USDX-PERP","mark_price":"50011.60"}`,
 			func(c *Client) error {
-				v, err := c.MarkPrice(ctx, "BTC-USDX-PERP")
+				v, err := c.FetchMarkPrice(ctx, "BTC-USDX-PERP")
 				return want(err, v != nil && v.MarkPrice.String() == "50011.60")
 			}},
-		{"MarketRiskParams", "/markets/BTC-USDX-PERP/risk-params", `{}`,
-			func(c *Client) error { v, err := c.MarketRiskParams(ctx, "BTC-USDX-PERP"); return want(err, v != nil) }},
-		{"MarketStatus", "/markets/BTC-USDX-PERP/status", `{"market_id":"BTC-USDX-PERP","status":"active"}`,
-			func(c *Client) error { v, err := c.MarketStatus(ctx, "BTC-USDX-PERP"); return want(err, v != nil) }},
-		{"AdlEvents", "/markets/BTC-USDX-PERP/adl-events?limit=7", `[]`,
-			func(c *Client) error { _, err := c.AdlEvents(ctx, "BTC-USDX-PERP", 7); return err }},
-		{"Status", "/status", `{"status":"ok"}`,
-			func(c *Client) error { v, err := c.Status(ctx); return want(err, v != nil) }},
-		{"Stats", "/stats", `{}`,
-			func(c *Client) error { v, err := c.Stats(ctx); return want(err, v != nil) }},
-		{"StatsHistory", "/stats/history", `[{}]`,
-			func(c *Client) error { v, err := c.StatsHistory(ctx); return want(err, len(v) == 1) }},
-		{"AccountFunding", "/funding", `[]`,
-			func(c *Client) error { _, err := c.AccountFunding(ctx, 0); return err }},
-		{"Funding", "/markets/BTC-USDX-PERP/funding?limit=3", `[{}]`,
-			func(c *Client) error { v, err := c.Funding(ctx, "BTC-USDX-PERP", 3); return want(err, len(v) == 1) }},
-		{"FundingSamples", "/markets/BTC-USDX-PERP/funding-samples", `[{}]`,
+		{"FetchMarketRiskParams", "/markets/BTC-USDX-PERP/risk-params", `{}`,
 			func(c *Client) error {
-				v, err := c.FundingSamples(ctx, "BTC-USDX-PERP", 0)
+				v, err := c.FetchMarketRiskParams(ctx, "BTC-USDX-PERP")
+				return want(err, v != nil)
+			}},
+		{"FetchMarketStatus", "/markets/BTC-USDX-PERP/status", `{"market_id":"BTC-USDX-PERP","status":"active"}`,
+			func(c *Client) error { v, err := c.FetchMarketStatus(ctx, "BTC-USDX-PERP"); return want(err, v != nil) }},
+		{"FetchAdlEvents", "/markets/BTC-USDX-PERP/adl-events?limit=7", `[]`,
+			func(c *Client) error { _, err := c.FetchAdlEvents(ctx, "BTC-USDX-PERP", 7); return err }},
+		{"FetchStatus", "/status", `{"status":"ok"}`,
+			func(c *Client) error { v, err := c.FetchStatus(ctx); return want(err, v != nil) }},
+		{"FetchStats", "/stats", `{}`,
+			func(c *Client) error { v, err := c.FetchStats(ctx); return want(err, v != nil) }},
+		{"FetchStatsHistory", "/stats/history", `[{}]`,
+			func(c *Client) error { v, err := c.FetchStatsHistory(ctx); return want(err, len(v) == 1) }},
+		{"FetchFundingHistory", "/funding", `[]`,
+			func(c *Client) error { _, err := c.FetchFundingHistory(ctx, 0); return err }},
+		{"FetchFundingRateHistory", "/markets/BTC-USDX-PERP/funding?limit=3", `[{}]`,
+			func(c *Client) error {
+				v, err := c.FetchFundingRateHistory(ctx, "BTC-USDX-PERP", 3)
 				return want(err, len(v) == 1)
 			}},
-		{"Tickers", "/tickers", `{"BTC-USDX-PERP":{"symbol":"BTC-USDX-PERP"},"ETH-USDX-PERP":{}}`,
-			func(c *Client) error { v, err := c.Tickers(ctx); return want(err, len(v) == 2) }},
-		{"Ticker", "/markets/BTC-USDX-PERP/ticker", `{"symbol":"BTC-USDX-PERP"}`,
-			func(c *Client) error { v, err := c.Ticker(ctx, "BTC-USDX-PERP"); return want(err, v != nil) }},
+		{"FetchFundingSamples", "/markets/BTC-USDX-PERP/funding-samples", `[{}]`,
+			func(c *Client) error {
+				v, err := c.FetchFundingSamples(ctx, "BTC-USDX-PERP", 0)
+				return want(err, len(v) == 1)
+			}},
+		{"FetchTickers", "/tickers", `{"BTC-USDX-PERP":{"symbol":"BTC-USDX-PERP"},"ETH-USDX-PERP":{}}`,
+			func(c *Client) error { v, err := c.FetchTickers(ctx); return want(err, len(v) == 2) }},
+		{"FetchTicker", "/markets/BTC-USDX-PERP/ticker", `{"symbol":"BTC-USDX-PERP"}`,
+			func(c *Client) error { v, err := c.FetchTicker(ctx, "BTC-USDX-PERP"); return want(err, v != nil) }},
 		// A book level is untyped in the spec; its numbers must still decode
 		// as json.Number, never float64.
-		{"OrderBook", "/markets/BTC-USDX-PERP/orderbook", `{"bids":[[78227.10,0.300]],"asks":[]}`,
+		{"FetchOrderBook", "/markets/BTC-USDX-PERP/orderbook", `{"bids":[[78227.10,0.300]],"asks":[]}`,
 			func(c *Client) error {
-				v, err := c.OrderBook(ctx, "BTC-USDX-PERP")
+				v, err := c.FetchOrderBook(ctx, "BTC-USDX-PERP")
 				return want(err, v != nil && (*v.Bids)[0][0] == json.Number("78227.10") && (*v.Bids)[0][1] == json.Number("0.300"))
 			}},
-		{"Trades", "/markets/BTC-USDX-PERP/trades", `[{"id":"t1","price":65000.10,"is_liquidation":false}]`,
+		{"FetchTrades", "/markets/BTC-USDX-PERP/trades", `[{"id":"t1","price":65000.10,"is_liquidation":false}]`,
 			func(c *Client) error {
 				n := 0
-				for tr, err := range c.Trades(ctx, "BTC-USDX-PERP", 0) {
+				for tr, err := range c.FetchTrades(ctx, "BTC-USDX-PERP", 0) {
 					if err != nil {
 						return err
 					}
@@ -92,10 +98,10 @@ func TestPublicOperations(t *testing.T) {
 				}
 				return want(nil, n == 1)
 			}},
-		{"Candles", "/markets/BTC-USDX-PERP/candles?endTime=9&limit=2&timeframe=5m",
+		{"FetchOHLCV", "/markets/BTC-USDX-PERP/candles?endTime=9&limit=2&timeframe=5m",
 			`[[1789000560000,78227.0,78405.0,78140.5,78225.0,26.555]]`,
 			func(c *Client) error {
-				v, err := c.Candles(ctx, "BTC-USDX-PERP", CandlesParams{Timeframe: "5m", Limit: 2, EndTime: 9})
+				v, err := c.FetchOHLCV(ctx, "BTC-USDX-PERP", CandlesParams{Timeframe: "5m", Limit: 2, EndTime: 9})
 				return want(err, len(v) == 1 && v[0].Timestamp == 1789000560000 && v[0].Open == "78227.0" && v[0].Volume == "26.555")
 			}},
 	} {
@@ -151,7 +157,7 @@ func TestTradesFollowsHeaderCursor(t *testing.T) {
 		w.Write([]byte(p.body))
 	})
 	var ids []string
-	for tr, err := range c.Trades(context.Background(), "BTC-USDX-PERP", 2) {
+	for tr, err := range c.FetchTrades(context.Background(), "BTC-USDX-PERP", 2) {
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -217,15 +223,15 @@ func TestLimitPassesThrough(t *testing.T) {
 	})
 	ctx := context.Background()
 	for _, limit := range []int{-1, 5000, 1} {
-		if _, err := c.Funding(ctx, "BTC-USDX-PERP", limit); err != nil {
+		if _, err := c.FetchFundingRateHistory(ctx, "BTC-USDX-PERP", limit); err != nil {
 			t.Fatal(err)
 		}
-		for _, err := range c.Trades(ctx, "BTC-USDX-PERP", limit) {
+		for _, err := range c.FetchTrades(ctx, "BTC-USDX-PERP", limit) {
 			if err != nil {
 				t.Fatal(err)
 			}
 		}
-		if _, err := c.Candles(ctx, "BTC-USDX-PERP", CandlesParams{Limit: limit}); err != nil {
+		if _, err := c.FetchOHLCV(ctx, "BTC-USDX-PERP", CandlesParams{Limit: limit}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -260,15 +266,15 @@ func candleServer(t *testing.T, first, last int64, requests *atomic.Int32) *Clie
 	})
 }
 
-// TestCandleHistoryWalksBackwards is the candles criterion offline: 250 bars,
+// TestFetchOHLCVHistoryWalksBackwards is the candles criterion offline: 250 bars,
 // 100 per response, walked newest to oldest with no gap or repeat.
-func TestCandleHistoryWalksBackwards(t *testing.T) {
+func TestFetchOHLCVHistoryWalksBackwards(t *testing.T) {
 	const first, n = int64(1_788_000_000_000), 250
 	last := first + (n-1)*60000
 	var requests atomic.Int32
 	c := candleServer(t, first, last, &requests)
 	prev, count := int64(1<<62), 0
-	for bar, err := range c.CandleHistory(context.Background(), "BTC-USDX-PERP", CandlesParams{Limit: 100}) {
+	for bar, err := range c.FetchOHLCVHistory(context.Background(), "BTC-USDX-PERP", CandlesParams{Limit: 100}) {
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -287,7 +293,7 @@ func TestCandleHistoryWalksBackwards(t *testing.T) {
 	requests.Store(0)
 	count = 0
 	stop := last - 149*60000
-	for bar, err := range c.CandleHistory(context.Background(), "BTC-USDX-PERP", CandlesParams{Limit: 100, StartTime: stop}) {
+	for bar, err := range c.FetchOHLCVHistory(context.Background(), "BTC-USDX-PERP", CandlesParams{Limit: 100, StartTime: stop}) {
 		if err != nil || bar.Timestamp < stop {
 			t.Fatalf("bar %d err %v", bar.Timestamp, err)
 		}
@@ -298,15 +304,15 @@ func TestCandleHistoryWalksBackwards(t *testing.T) {
 	}
 }
 
-// TestCandleHistoryDetectsIgnoredEndTime is the failure that burned a gate
+// TestFetchOHLCVHistoryDetectsIgnoredEndTime is the failure that burned a gate
 // before: a server that ignores the bound serves the same page forever.
-func TestCandleHistoryDetectsIgnoredEndTime(t *testing.T) {
+func TestFetchOHLCVHistoryDetectsIgnoredEndTime(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`[[1000,1,1,1,1,1],[61000,1,1,1,1,1]]`))
 	})
 	var n int
 	var last error
-	for _, err := range c.CandleHistory(context.Background(), "BTC-USDX-PERP", CandlesParams{}) {
+	for _, err := range c.FetchOHLCVHistory(context.Background(), "BTC-USDX-PERP", CandlesParams{}) {
 		n++
 		last = err
 	}
@@ -333,7 +339,7 @@ func TestVersionError(t *testing.T) {
 				w.WriteHeader(http.StatusUpgradeRequired)
 				w.Write([]byte(tc.body))
 			})
-			_, err := c.Status(context.Background())
+			_, err := c.FetchStatus(context.Background())
 			var verr *VersionError
 			if !errors.As(err, &verr) {
 				t.Fatalf("err = %v, want *VersionError", err)
@@ -355,9 +361,9 @@ func TestVersionError(t *testing.T) {
 	}
 }
 
-// TestTestnetCandleHistory runs the backward walk against testnet's real
+// TestTestnetFetchOHLCVHistory runs the backward walk against testnet's real
 // candles. Set NEXUS_TESTNET=1 to run it; it needs no credential.
-func TestTestnetCandleHistory(t *testing.T) {
+func TestTestnetFetchOHLCVHistory(t *testing.T) {
 	if os.Getenv("NEXUS_TESTNET") != "1" {
 		t.Skip("set NEXUS_TESTNET=1 to run against api.testnet.nexus.xyz")
 	}
@@ -369,7 +375,7 @@ func TestTestnetCandleHistory(t *testing.T) {
 	defer cancel()
 	const limit, want = 100, 350
 	var bars []Candle
-	for bar, err := range c.CandleHistory(ctx, "BTC-USDX-PERP", CandlesParams{Timeframe: "1m", Limit: limit}) {
+	for bar, err := range c.FetchOHLCVHistory(ctx, "BTC-USDX-PERP", CandlesParams{Timeframe: "1m", Limit: limit}) {
 		if err != nil {
 			t.Fatal(err)
 		}

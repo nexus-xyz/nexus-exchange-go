@@ -10,7 +10,7 @@
 //	if err != nil {
 //		return err
 //	}
-//	t, err := c.Ticker(ctx, "BTC-USDX-PERP")
+//	t, err := c.FetchTicker(ctx, "BTC-USDX-PERP")
 //
 // Trading needs one, usually an API key:
 //
@@ -62,7 +62,7 @@
 //     text itself gets an opaque 401 on every call.
 //   - [WithWallet]: the owner wallet's key. The client signs in (EIP-191) and
 //     keeps its session fresh. Full authority over the account.
-//   - [WithSession]: a session from [Client.SignIn], used until it expires and
+//   - [WithSession]: a session from [Client.Login], used until it expires and
 //     then refused locally with [ErrSessionExpired]. A session can mint API
 //     keys with [Client.CreateAPIKey].
 //   - [WithAgent]: an agent key the wallet registered with

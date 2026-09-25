@@ -39,7 +39,7 @@ func run(ctx context.Context, market string) error {
 		return err
 	}
 
-	t, err := c.Ticker(ctx, market)
+	t, err := c.FetchTicker(ctx, market)
 	if err != nil {
 		return err
 	}
