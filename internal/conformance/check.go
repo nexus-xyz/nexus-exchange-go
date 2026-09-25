@@ -90,6 +90,8 @@ func (c *checker) count(sev Severity) (n int) {
 }
 
 // flatten follows $ref and merges allOf, so the result is one schema object.
+// depth bounds a recursive $ref. Past 16 levels it returns nil, which every
+// caller reads as "no schema", so that part of the body is not checked.
 func (c *checker) flatten(s any, depth int) map[string]any {
 	m, _ := s.(map[string]any)
 	if m == nil || depth > 16 {
