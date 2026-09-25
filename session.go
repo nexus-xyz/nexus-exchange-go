@@ -68,7 +68,7 @@ func (s *Session) MarshalJSON() ([]byte, error) { return []byte(`"` + s.String()
 // carries Retry-After.
 func (c *Client) Login(ctx context.Context, wallet *PrivateKey) (*Session, error) {
 	if wallet == nil {
-		return nil, errors.New("nexus: SignIn needs a wallet key")
+		return nil, errors.New("nexus: Login needs a wallet key")
 	}
 	start := c.now()
 	sig := signing.SignHash(wallet.key(), signing.PersonalHash(signInMessage))

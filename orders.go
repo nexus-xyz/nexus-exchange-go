@@ -94,7 +94,7 @@ func (p Page) query() url.Values {
 //
 // It is sent exactly once and never retried, like every method that changes
 // state. On any failure, a timeout or a 5xx included, the order may or may not
-// have been accepted: read it back with OpenOrders or Order before
+// have been accepted: read it back with FetchOpenOrders or FetchOrder before
 // resubmitting.
 func (c *Client) CreateOrder(ctx context.Context, req OrderRequest) (*OrderResponse, error) {
 	var out OrderResponse
@@ -155,7 +155,7 @@ func (c *Client) CancelOrder(ctx context.Context, orderID, marketID string) (*Or
 
 // CancelAllOrders cancels every resting order (DELETE /orders), or only those
 // in marketID when it is not empty, and returns the orders it cancelled. A
-// short list does not prove nothing rests: check OpenOrders. It is sent at
+// short list does not prove nothing rests: check FetchOpenOrders. It is sent at
 // once and never retried.
 func (c *Client) CancelAllOrders(ctx context.Context, marketID string) ([]Order, error) {
 	path := "/orders"

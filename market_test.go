@@ -34,57 +34,57 @@ func TestPublicOperations(t *testing.T) {
 		name, uri, body string
 		call            func(*Client) error
 	}{
-		{"Markets", "/markets", `[{"market_id":"BTC-USDX-PERP","tick_size":"0.5"}]`,
+		{"FetchMarkets", "/markets", `[{"market_id":"BTC-USDX-PERP","tick_size":"0.5"}]`,
 			func(c *Client) error {
 				v, err := c.FetchMarkets(ctx)
 				return want(err, len(v) == 1 && v[0].TickSize.String() == "0.5")
 			}},
-		{"MarketsSummary", "/markets/summary", `[{"market_id":"BTC-USDX-PERP","last_trade_price":null,"volume_24h":0.0}]`,
+		{"FetchMarketsSummary", "/markets/summary", `[{"market_id":"BTC-USDX-PERP","last_trade_price":null,"volume_24h":0.0}]`,
 			func(c *Client) error { v, err := c.FetchMarketsSummary(ctx); return want(err, len(v) == 1) }},
-		{"MarkPrice", "/markets/BTC-USDX-PERP/mark-price", `{"market_id":"BTC-USDX-PERP","mark_price":"50011.60"}`,
+		{"FetchMarkPrice", "/markets/BTC-USDX-PERP/mark-price", `{"market_id":"BTC-USDX-PERP","mark_price":"50011.60"}`,
 			func(c *Client) error {
 				v, err := c.FetchMarkPrice(ctx, "BTC-USDX-PERP")
 				return want(err, v != nil && v.MarkPrice.String() == "50011.60")
 			}},
-		{"MarketRiskParams", "/markets/BTC-USDX-PERP/risk-params", `{}`,
+		{"FetchMarketRiskParams", "/markets/BTC-USDX-PERP/risk-params", `{}`,
 			func(c *Client) error {
 				v, err := c.FetchMarketRiskParams(ctx, "BTC-USDX-PERP")
 				return want(err, v != nil)
 			}},
-		{"MarketStatus", "/markets/BTC-USDX-PERP/status", `{"market_id":"BTC-USDX-PERP","status":"active"}`,
+		{"FetchMarketStatus", "/markets/BTC-USDX-PERP/status", `{"market_id":"BTC-USDX-PERP","status":"active"}`,
 			func(c *Client) error { v, err := c.FetchMarketStatus(ctx, "BTC-USDX-PERP"); return want(err, v != nil) }},
-		{"AdlEvents", "/markets/BTC-USDX-PERP/adl-events?limit=7", `[]`,
+		{"FetchAdlEvents", "/markets/BTC-USDX-PERP/adl-events?limit=7", `[]`,
 			func(c *Client) error { _, err := c.FetchAdlEvents(ctx, "BTC-USDX-PERP", 7); return err }},
-		{"Status", "/status", `{"status":"ok"}`,
+		{"FetchStatus", "/status", `{"status":"ok"}`,
 			func(c *Client) error { v, err := c.FetchStatus(ctx); return want(err, v != nil) }},
-		{"Stats", "/stats", `{}`,
+		{"FetchStats", "/stats", `{}`,
 			func(c *Client) error { v, err := c.FetchStats(ctx); return want(err, v != nil) }},
-		{"StatsHistory", "/stats/history", `[{}]`,
+		{"FetchStatsHistory", "/stats/history", `[{}]`,
 			func(c *Client) error { v, err := c.FetchStatsHistory(ctx); return want(err, len(v) == 1) }},
-		{"AccountFunding", "/funding", `[]`,
+		{"FetchFundingHistory", "/funding", `[]`,
 			func(c *Client) error { _, err := c.FetchFundingHistory(ctx, 0); return err }},
-		{"Funding", "/markets/BTC-USDX-PERP/funding?limit=3", `[{}]`,
+		{"FetchFundingRateHistory", "/markets/BTC-USDX-PERP/funding?limit=3", `[{}]`,
 			func(c *Client) error {
 				v, err := c.FetchFundingRateHistory(ctx, "BTC-USDX-PERP", 3)
 				return want(err, len(v) == 1)
 			}},
-		{"FundingSamples", "/markets/BTC-USDX-PERP/funding-samples", `[{}]`,
+		{"FetchFundingSamples", "/markets/BTC-USDX-PERP/funding-samples", `[{}]`,
 			func(c *Client) error {
 				v, err := c.FetchFundingSamples(ctx, "BTC-USDX-PERP", 0)
 				return want(err, len(v) == 1)
 			}},
-		{"Tickers", "/tickers", `{"BTC-USDX-PERP":{"symbol":"BTC-USDX-PERP"},"ETH-USDX-PERP":{}}`,
+		{"FetchTickers", "/tickers", `{"BTC-USDX-PERP":{"symbol":"BTC-USDX-PERP"},"ETH-USDX-PERP":{}}`,
 			func(c *Client) error { v, err := c.FetchTickers(ctx); return want(err, len(v) == 2) }},
-		{"Ticker", "/markets/BTC-USDX-PERP/ticker", `{"symbol":"BTC-USDX-PERP"}`,
+		{"FetchTicker", "/markets/BTC-USDX-PERP/ticker", `{"symbol":"BTC-USDX-PERP"}`,
 			func(c *Client) error { v, err := c.FetchTicker(ctx, "BTC-USDX-PERP"); return want(err, v != nil) }},
 		// A book level is untyped in the spec; its numbers must still decode
 		// as json.Number, never float64.
-		{"OrderBook", "/markets/BTC-USDX-PERP/orderbook", `{"bids":[[78227.10,0.300]],"asks":[]}`,
+		{"FetchOrderBook", "/markets/BTC-USDX-PERP/orderbook", `{"bids":[[78227.10,0.300]],"asks":[]}`,
 			func(c *Client) error {
 				v, err := c.FetchOrderBook(ctx, "BTC-USDX-PERP")
 				return want(err, v != nil && (*v.Bids)[0][0] == json.Number("78227.10") && (*v.Bids)[0][1] == json.Number("0.300"))
 			}},
-		{"Trades", "/markets/BTC-USDX-PERP/trades", `[{"id":"t1","price":65000.10,"is_liquidation":false}]`,
+		{"FetchTrades", "/markets/BTC-USDX-PERP/trades", `[{"id":"t1","price":65000.10,"is_liquidation":false}]`,
 			func(c *Client) error {
 				n := 0
 				for tr, err := range c.FetchTrades(ctx, "BTC-USDX-PERP", 0) {
@@ -98,7 +98,7 @@ func TestPublicOperations(t *testing.T) {
 				}
 				return want(nil, n == 1)
 			}},
-		{"Candles", "/markets/BTC-USDX-PERP/candles?endTime=9&limit=2&timeframe=5m",
+		{"FetchOHLCV", "/markets/BTC-USDX-PERP/candles?endTime=9&limit=2&timeframe=5m",
 			`[[1789000560000,78227.0,78405.0,78140.5,78225.0,26.555]]`,
 			func(c *Client) error {
 				v, err := c.FetchOHLCV(ctx, "BTC-USDX-PERP", CandlesParams{Timeframe: "5m", Limit: 2, EndTime: 9})

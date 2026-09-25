@@ -34,14 +34,14 @@ func TestTestnetLogin(t *testing.T) {
 
 	sess, err := pub.Login(ctx, wallet)
 	if err != nil {
-		t.Fatalf("SignIn: %v", err)
+		t.Fatalf("Login: %v", err)
 	}
 	if sess.Address() != wallet.Address() {
 		t.Fatalf("session address %s, want %s", sess.Address(), wallet.Address())
 	}
 	sc, _ := NewClient(Testnet, WithSession(sess))
 	if _, err := sc.FetchAPIKeys(ctx); err != nil {
-		t.Fatalf("APIKeys with session: %v", err)
+		t.Fatalf("FetchAPIKeys with session: %v", err)
 	}
 	key, err := sc.CreateAPIKey(ctx)
 	if err != nil {
@@ -73,11 +73,11 @@ func TestTestnetLogin(t *testing.T) {
 		}
 	}()
 	if list, err := hc.FetchAgents(ctx); err != nil || len(list) != 1 {
-		t.Errorf("Agents = %d, %v; want the one just registered", len(list), err)
+		t.Errorf("FetchAgents = %d, %v; want the one just registered", len(list), err)
 	}
 	ac, _ := NewClient(Testnet, WithAgent(agent))
 	if _, err := ac.FetchOpenOrders(ctx); err != nil {
-		t.Errorf("OpenOrders with agent: %v", err)
+		t.Errorf("FetchOpenOrders with agent: %v", err)
 	}
 	if err := ac.t.Send(ctx, "POST", "/withdrawals", map[string]string{"amount": "1"}, nil); !errors.Is(err, ErrAgentCannotWithdraw) {
 		t.Errorf("agent withdrawal = %v, want ErrAgentCannotWithdraw", err)
