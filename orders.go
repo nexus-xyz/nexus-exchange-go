@@ -18,8 +18,8 @@ type (
 	// quantity, time_in_force).
 	OrderRequest = models.OrderRequest
 	// OrderResponse is what [Client.CreateOrder] returns: the placed order and
-	// any fills it took immediately. At the pinned spec (v0.8.1) it is the
-	// snake_case {order, fills} shape.
+	// any fills it took immediately. At the pinned spec ([APIVersion]) it is
+	// the snake_case {order, fills} shape.
 	OrderResponse = models.OrderResponse
 	// OrderResult is one entry of a [Client.CreateOrders] response.
 	// Branch on Discriminator ("ok" or "err"), then read it with
@@ -96,6 +96,12 @@ func (p Page) query() url.Values {
 // state. On any failure, a timeout or a 5xx included, the order may or may not
 // have been accepted: read it back with FetchOpenOrders or FetchOrder before
 // resubmitting.
+//
+// POST /orders/preview is billed as a trading action: it spends the same
+// order budget as this method, so previewing before every order halves the
+// effective placement rate, and nothing in the name suggests that. This SDK
+// has no preview method yet, and nothing in it calls that route (a test
+// keeps it that way); if you call it yourself, budget for it as an order.
 func (c *Client) CreateOrder(ctx context.Context, req OrderRequest) (*OrderResponse, error) {
 	var out OrderResponse
 	if err := c.t.Send(ctx, http.MethodPost, "/orders", req, &out); err != nil {
@@ -143,8 +149,8 @@ func (c *Client) EditOrder(ctx context.Context, orderID, marketID string, req Am
 // An *http.Client given with [WithHTTPClient] that caps connections per host
 // can still serialize requests; do not cap it below the concurrency you need.
 //
-// The pinned spec (v0.8.1) documents no body for this response; the order
-// decoded is the Order shape the server serves.
+// The pinned spec ([APIVersion]) documents no body for this response; the
+// order decoded is the Order shape the server serves.
 func (c *Client) CancelOrder(ctx context.Context, orderID, marketID string) (*Order, error) {
 	var out Order
 	if err := c.t.Send(ctx, http.MethodDelete, orderPath(orderID, marketID), nil, &out); err != nil {
