@@ -49,11 +49,34 @@ type Transport struct {
 
 	// Signer, when set, signs every request (every attempt, so a retried GET
 	// carries a fresh timestamp).
-	Signer *signing.HMAC
+	Signer Signer
 
 	// limits paces requests on the budgets the server reports (ratelimit.go).
 	limits limiter
 }
+
+// Signer authenticates one request attempt by setting headers on h. path is
+// the signed path (without the base prefix) and query the raw query string.
+// An error aborts the request before any network I/O and is not retried.
+type Signer interface {
+	Sign(ctx context.Context, h http.Header, method, path, query string, body []byte) error
+}
+
+// clocked is a Signer that stamps requests with its own clock, so a 401 can
+// report how far that clock is from the server's.
+type clocked interface{ Clock() time.Time }
+
+// localError is a refusal made before any bytes left the process. Get never
+// retries it: the same request is refused the same way again.
+type localError struct{ error }
+
+func (e localError) Unwrap() error { return e.error }
+
+// Compile-time checks that the signers satisfy Signer.
+var (
+	_ Signer = (*signing.HMAC)(nil)
+	_ Signer = (*signing.Agent)(nil)
+)
 
 // New returns a Transport for base (no trailing slash) sending through hc.
 // apiVersion is sent on every request as X-Nexus-Api-Version.
@@ -153,7 +176,9 @@ func (t *Transport) do(ctx context.Context, method, path string, body []byte, ou
 	if t.Signer != nil {
 		// Sign what goes on the wire, minus the base prefix the edge strips.
 		signed := strings.TrimPrefix(req.URL.EscapedPath(), t.basePath)
-		t.Signer.Apply(req.Header, method, signed, req.URL.RawQuery, body)
+		if err := t.Signer.Sign(ctx, req.Header, method, signed, req.URL.RawQuery, body); err != nil {
+			return localError{err}
+		}
 	}
 	resp, err := t.http.Do(req)
 	if err != nil {
@@ -170,8 +195,8 @@ func (t *Transport) do(ctx context.Context, method, path string, body []byte, ou
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		e := decodeError(resp.StatusCode, resp.Header, data)
 		t.limits.observe(class, resp.Header, e, time.Now())
-		if resp.StatusCode == http.StatusUnauthorized && t.Signer != nil {
-			t.estimateSkew(e, resp.Header)
+		if c, ok := t.Signer.(clocked); ok && resp.StatusCode == http.StatusUnauthorized {
+			estimateSkew(e, resp.Header, c.Clock())
 		}
 		if resp.StatusCode == http.StatusUpgradeRequired {
 			return newVersionError(e, t.apiVersion, resp.Header)
@@ -206,18 +231,14 @@ func UnmarshalNumbers(data []byte, out any) error {
 // estimateSkew records how far the server's Date header is from the clock the
 // signer stamped with. It says nothing about why the server refused: a 401 is
 // opaque (R2.12), and skew is one fact among several possible causes.
-func (t *Transport) estimateSkew(e *APIError, h http.Header) {
+func estimateSkew(e *APIError, h http.Header, now time.Time) {
 	d, err := http.ParseTime(h.Get("Date"))
 	if err != nil {
 		return
 	}
-	now := time.Now
-	if t.Signer.Now != nil {
-		now = t.Signer.Now
-	}
 	e.ServerTime = d
 	// Date has one-second resolution, so finer precision would be invented.
-	e.ClockSkew = d.Sub(now()).Round(time.Second)
+	e.ClockSkew = d.Sub(now).Round(time.Second)
 }
 
 // retryable reports whether a GET that failed with err may succeed if sent
@@ -225,7 +246,8 @@ func (t *Transport) estimateSkew(e *APIError, h http.Header) {
 // other 429 codes are caps, not budgets that refill), or a transport failure
 // that was not the caller cancelling.
 func retryable(ctx context.Context, err error) bool {
-	if err == nil || ctx.Err() != nil {
+	var local localError
+	if err == nil || ctx.Err() != nil || errors.As(err, &local) {
 		return false
 	}
 	var apiErr *APIError

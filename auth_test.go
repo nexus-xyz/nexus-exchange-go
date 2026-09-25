@@ -117,7 +117,7 @@ func TestSignedRequestOnTheWire(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			c.t.Signer.Now = func() time.Time { return time.UnixMilli(ts) }
+			c.t.Signer.(*signing.HMAC).Now = func() time.Time { return time.UnixMilli(ts) }
 			q := url.Values{"limit": {"50"}, "cursor": {"abc"}}
 			if err := c.t.Get(context.Background(), "/orders", q, nil); err != nil {
 				t.Fatal(err)
@@ -148,7 +148,7 @@ func TestUnauthorizedReportsSkew(t *testing.T) {
 				return &http.Response{StatusCode: 401, Header: h, Body: io.NopCloser(strings.NewReader(`{"code":"unauthorized"}`))}, nil
 			})}
 			c, _ := NewClient(Testnet, WithHTTPClient(hc), WithHMACAuth("nx_test", key))
-			c.t.Signer.Now = func() time.Time { return now }
+			c.t.Signer.(*signing.HMAC).Now = func() time.Time { return now }
 			err := c.t.Get(context.Background(), "/account", nil, nil)
 			var apiErr *APIError
 			if !errors.As(err, &apiErr) || !errors.Is(err, ErrUnauthorized) {
