@@ -1,10 +1,12 @@
 package nexus
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/nexus-xyz/nexus-exchange-go/internal/signing"
 )
@@ -63,17 +65,41 @@ func (APISecret) MarshalJSON() ([]byte, error) { return []byte(`"` + redacted + 
 // NewClient returns an error if secret is the zero APISecret or keyID is
 // empty.
 func WithHMACAuth(keyID string, secret APISecret) Option {
-	return func(c *config) {
-		c.keyID, c.secret, c.hmacSet = keyID, secret, true
+	return func(cfg *config) {
+		cfg.creds = append(cfg.creds, func(c *Client) error {
+			if keyID == "" || secret.key == nil {
+				return errors.New("nexus: WithHMACAuth needs a key id and a secret from NewAPISecret")
+			}
+			c.t.Signer = &signing.HMAC{KeyID: keyID, Secret: secret.key()}
+			c.account = c.ownerFromServer()
+			return nil
+		})
 	}
 }
 
-func (c *config) signer() (*signing.HMAC, error) {
-	if !c.hmacSet {
-		return nil, nil
+// ownerFromServer asks GET /account for the owner an API key maps to, once;
+// a failed lookup is not kept, so the next call asks again.
+func (c *Client) ownerFromServer() func(context.Context) (string, error) {
+	var (
+		mu    sync.Mutex
+		owner string
+	)
+	return func(ctx context.Context) (string, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		if owner != "" {
+			return owner, nil
+		}
+		var out struct {
+			Owner string `json:"owner"`
+		}
+		if err := c.t.Get(ctx, "/account", nil, &out); err != nil {
+			return "", err
+		}
+		if out.Owner == "" {
+			return "", errors.New("nexus: GET /account did not echo the owner address")
+		}
+		owner = strings.ToLower(out.Owner)
+		return owner, nil
 	}
-	if c.keyID == "" || c.secret.key == nil {
-		return nil, errors.New("nexus: WithHMACAuth needs a key id and a secret from NewAPISecret")
-	}
-	return &signing.HMAC{KeyID: c.keyID, Secret: c.secret.key()}, nil
 }

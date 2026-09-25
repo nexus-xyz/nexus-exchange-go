@@ -59,6 +59,14 @@ output-options:
     - fetchPositions
     - fetchCancelOnDisconnect
     - setCancelOnDisconnect
+    # Module 4, wallet sign-in, sessions and agent keys:
+    - login
+    - createApiKey
+    - listApiKeys
+    - deleteApiKey
+    - registerAgent
+    - listAgents
+    - revokeAgent
     # Module 9, WebSocket token and upgrades:
     - createWsToken
     - connectWebSocket
