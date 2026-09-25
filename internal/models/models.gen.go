@@ -475,6 +475,42 @@ type AdlEventRecord struct {
 	Timestamp *TimestampMs `json:"timestamp,omitempty"`
 }
 
+// AgentInfo defines model for AgentInfo.
+type AgentInfo struct {
+	// Address Agent address (0x-prefixed)
+	Address *string `json:"address,omitempty"`
+
+	// ExpiresAt Expiry Unix ms
+	ExpiresAt *TimestampMs `json:"expiresAt,omitempty"`
+
+	// Label Optional label
+	Label nullable.Nullable[string] `json:"label,omitempty"`
+
+	// RegisteredAt Registration time Unix ms
+	RegisteredAt *TimestampMs `json:"registeredAt,omitempty"`
+}
+
+// AgentRegistrationRequest defines model for AgentRegistrationRequest.
+type AgentRegistrationRequest struct {
+	// Agent Agent Ethereum address (0x-prefixed, 20 bytes) derived from the agent keypair
+	Agent string `json:"agent"`
+
+	// ExpiresAt Expiry as Unix ms. Optional — defaults to now+30d. Must be in [now+1d, now+90d].
+	ExpiresAt *int64 `json:"expires_at,omitempty"`
+
+	// Label Optional human-readable label for the agent (e.g. 'my-bot')
+	Label *string `json:"label,omitempty"`
+
+	// Nonce Monotonic nonce. Use the current Unix timestamp in ms as a safe starting value.
+	Nonce int64 `json:"nonce"`
+
+	// Signature EIP-712 signature over RegisterAgent{agent, expiresAt, nonce} from the wallet private key (0x-prefixed)
+	Signature string `json:"signature"`
+
+	// Wallet Owner wallet address (0x-prefixed, 20 bytes)
+	Wallet string `json:"wallet"`
+}
+
 // AmendOrderRequest Atomic cancel-replace amend of a resting order. At least one of `price` (new limit price) or `size` (new quantity) must be present; an empty body is rejected with InvalidAmend.
 type AmendOrderRequest struct {
 	// Price Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
@@ -569,6 +605,24 @@ type JurisdictionError struct {
 
 	// Message Human-readable explanation. Wording is not stable and is not intended for programmatic matching.
 	Message string `json:"message"`
+}
+
+// LoginRequest defines model for LoginRequest.
+type LoginRequest struct {
+	// Message Must be exactly: "Sign in to Nexus Exchange"
+	Message string `json:"message"`
+
+	// Signature EIP-191 personal_sign hex (0x-prefixed, 65 bytes)
+	Signature string `json:"signature"`
+}
+
+// LoginResponse defines model for LoginResponse.
+type LoginResponse struct {
+	// Address Recovered Ethereum address (0x-prefixed)
+	Address *string `json:"address,omitempty"`
+
+	// Token Session token (64-char hex). Use as Bearer token for /keys endpoints.
+	Token *string `json:"token,omitempty"`
 }
 
 // Market defines model for Market.
@@ -1140,6 +1194,12 @@ type ConnectWebSocketParams struct {
 
 // SetCancelOnDisconnectJSONRequestBody defines body for SetCancelOnDisconnect for application/json ContentType.
 type SetCancelOnDisconnectJSONRequestBody = SetCancelOnDisconnectRequest
+
+// RegisterAgentJSONRequestBody defines body for RegisterAgent for application/json ContentType.
+type RegisterAgentJSONRequestBody = AgentRegistrationRequest
+
+// LoginJSONRequestBody defines body for Login for application/json ContentType.
+type LoginJSONRequestBody = LoginRequest
 
 // CreateOrderJSONRequestBody defines body for CreateOrder for application/json ContentType.
 type CreateOrderJSONRequestBody = OrderRequest
