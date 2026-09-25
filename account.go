@@ -58,8 +58,10 @@ func (a Account) CancelOnDisconnect(ctx context.Context) (*CancelOnDisconnectSta
 // account's last authenticated WebSocket connection drops and does not
 // reconnect within the grace window, the exchange cancels every resting order
 // on the account, so a crashed or partitioned process cannot leave orders
-// exposed. It is per account and off by default. It keys on the WebSocket
-// connection, not on REST traffic: a bot that only uses REST is not covered.
+// exposed. It is per account and off by default. It keys on the account
+// socket (/ws), not on REST traffic or the public [MarketStream]: it protects
+// only a bot that holds a [Subscription] open (see [Client.Subscribe]), and a
+// bot that only uses REST is not covered.
 // Check Active on the result, not just Enabled: the exchange-side switch must
 // also be on for it to fire.
 //
