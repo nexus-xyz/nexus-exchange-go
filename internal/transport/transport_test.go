@@ -105,26 +105,30 @@ func TestSentinels(t *testing.T) {
 	}
 }
 
-// TestRetries pins that only GET retries, and never on 429 or a 4xx, and that
-// no mutation is ever sent twice.
+// TestRetries pins that only GET retries, never on a 4xx other than a budget
+// 429, and that no mutation is ever sent twice, a 429 included.
 func TestRetries(t *testing.T) {
 	for _, tc := range []struct {
 		name, method string
 		statuses     []int // served in order; the last repeats
 		wantCalls    int32
 		wantErr      bool
+		code         string // body code; "X" when empty
 	}{
-		{"GET 503 then 200 retries", "GET", []int{503, 200}, 2, false},
-		{"GET transient forever is bounded", "GET", []int{503}, 4, true},
-		{"GET 500 502 504 then 200", "GET", []int{500, 502, 504, 200}, 4, false},
-		{"GET 429 is not retried", "GET", []int{429}, 1, true},
-		{"GET 404 is not retried", "GET", []int{404}, 1, true},
-		{"GET 501 is not retried", "GET", []int{501}, 1, true},
-		{"POST 503 is sent once", "POST", []int{503}, 1, true},
-		{"POST 500 is sent once", "POST", []int{500}, 1, true},
-		{"PUT 503 is sent once", "PUT", []int{503}, 1, true},
-		{"PATCH 503 is sent once", "PATCH", []int{503}, 1, true},
-		{"DELETE 503 is sent once", "DELETE", []int{503}, 1, true},
+		{"GET 503 then 200 retries", "GET", []int{503, 200}, 2, false, ""},
+		{"GET transient forever is bounded", "GET", []int{503}, 4, true, ""},
+		{"GET 500 502 504 then 200", "GET", []int{500, 502, 504, 200}, 4, false, ""},
+		{"GET 429 with a cap code is not retried", "GET", []int{429}, 1, true, "too_many_agents"},
+		{"POST 429 is sent once", "POST", []int{429}, 1, true, "RATE_LIMIT_EXCEEDED"},
+		{"PATCH 429 is sent once", "PATCH", []int{429}, 1, true, "RATE_LIMIT_EXCEEDED"},
+		{"DELETE 429 is sent once", "DELETE", []int{429}, 1, true, "RATE_LIMIT_EXCEEDED"},
+		{"GET 404 is not retried", "GET", []int{404}, 1, true, ""},
+		{"GET 501 is not retried", "GET", []int{501}, 1, true, ""},
+		{"POST 503 is sent once", "POST", []int{503}, 1, true, ""},
+		{"POST 500 is sent once", "POST", []int{500}, 1, true, ""},
+		{"PUT 503 is sent once", "PUT", []int{503}, 1, true, ""},
+		{"PATCH 503 is sent once", "PATCH", []int{503}, 1, true, ""},
+		{"DELETE 503 is sent once", "DELETE", []int{503}, 1, true, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var calls atomic.Int32
@@ -133,8 +137,12 @@ func TestRetries(t *testing.T) {
 				if r.Method != tc.method {
 					t.Errorf("method = %s, want %s", r.Method, tc.method)
 				}
+				code := tc.code
+				if code == "" {
+					code = "X"
+				}
 				w.WriteHeader(tc.statuses[min(n, len(tc.statuses)-1)])
-				w.Write([]byte(`{"code":"X"}`))
+				w.Write([]byte(`{"code":"` + code + `"}`))
 			})
 			var err error
 			if tc.method == "GET" {

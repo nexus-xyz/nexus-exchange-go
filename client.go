@@ -18,15 +18,28 @@ const defaultTimeout = 30 * time.Second
 // concurrent use.
 //
 // Every call takes a [context.Context] as its first argument; cancelling it
-// aborts the request in flight. Only GET requests are retried (transport
-// failures and 5xx, at most 3 times, with jittered backoff). A request that can
-// change state is sent exactly once, whatever the outcome, because a duplicate
-// order is worse than a failed one. A 429 is never retried: it is returned as
+// aborts the request in flight, or the wait before it. Only GET requests are
+// retried, at most 3 times: transport failures and 5xx with jittered backoff,
+// and a RATE_LIMIT_EXCEEDED 429 after its Retry-After (never below one
+// second) plus jitter. A
+// request that can change state is sent exactly once, whatever the outcome,
+// because a duplicate order is worse than a failed one; its 429 is returned as
 // an [*APIError] carrying Retry-After.
 //
 // A client holds at most one credential, chosen at construction:
 // [WithHMACAuth], [WithSession], [WithWallet] or [WithAgent]. Whichever it is,
 // [Client.AccountAddress] says which account the client acts for.
+//
+// # Rate limits
+//
+// The client paces itself on the budgets the server reports in its
+// x-ratelimit-* headers, one budget at a time: reads, order submission and
+// sign-in each wait only on their own. Each call is charged its weight, read
+// from the pinned spec's x-nexus-rate-limit-weight markers rather than typed
+// from the documentation, so a heavy read (GET /fills, weight 5) spends five
+// times what a ticker read does, and a remaining of 10 is two of them. Until a
+// response has reported a budget nothing is paced. Cancels are never paced:
+// see [Client.CancelOrder].
 type Client struct {
 	t *transport.Transport
 	// pub sends the operations authorised by a signature in the body rather

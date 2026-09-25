@@ -27,7 +27,8 @@ var (
 	ErrUnauthorized = transport.ErrUnauthorized
 	// ErrNotFound matches any 404, including "exists but is not yours".
 	ErrNotFound = transport.ErrNotFound
-	// ErrRateLimited matches any 429. The SDK does not retry it; honour
+	// ErrRateLimited matches any 429. A GET has already been retried after
+	// Retry-After when you see it; a mutation never is. Honour
 	// APIError.RetryAfter and see APIError.Bucket for which budget refused.
 	ErrRateLimited = transport.ErrRateLimited
 	// ErrMarginUnavailable matches code authoritative_margin_unavailable: the

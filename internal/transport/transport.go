@@ -50,6 +50,9 @@ type Transport struct {
 	// Signer, when set, signs every request (every attempt, so a retried GET
 	// carries a fresh timestamp).
 	Signer Signer
+
+	// limits paces requests on the budgets the server reports (ratelimit.go).
+	limits limiter
 }
 
 // Signer authenticates one request attempt by setting headers on h. path is
@@ -96,9 +99,10 @@ func New(base string, hc *http.Client, apiVersion string) *Transport {
 }
 
 // Get sends an idempotent GET and decodes a 2xx JSON body into out (unless out
-// is nil). It is the only method that retries: transport failures and 5xx
-// responses other than 501 and 505, up to maxRetries times with jittered
-// exponential backoff. A 429 is returned at once, never retried.
+// is nil). It is the only method that retries, up to maxRetries times:
+// transport failures and 5xx responses other than 501 and 505 with jittered
+// exponential backoff, and a RATE_LIMIT_EXCEEDED 429 after its retry-after
+// (never below one second) plus jitter.
 func (t *Transport) Get(ctx context.Context, path string, query url.Values, out any) error {
 	if t.Refuse != nil {
 		return t.Refuse
@@ -114,6 +118,10 @@ func (t *Transport) Get(ctx context.Context, path string, query url.Values, out 
 		}
 		// Jitter: sleep a random duration in [delay/2, delay].
 		sleep := delay/2 + rand.N(delay/2+1)
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusTooManyRequests {
+			sleep = retryAfterDelay(apiErr.RetryAfter)
+		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -145,6 +153,12 @@ func (t *Transport) Send(ctx context.Context, method, path string, body, out any
 }
 
 func (t *Transport) do(ctx context.Context, method, path string, body []byte, out any) error {
+	class, weight := costOf(method, path, body)
+	if b := t.limits.of(class); b != nil {
+		if err := b.wait(ctx, weight); err != nil {
+			return err
+		}
+	}
 	var r io.Reader
 	if body != nil {
 		r = bytes.NewReader(body)
@@ -180,6 +194,7 @@ func (t *Transport) do(ctx context.Context, method, path string, body []byte, ou
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		e := decodeError(resp.StatusCode, resp.Header, data)
+		t.limits.observe(class, resp.Header, e, time.Now())
 		if c, ok := t.Signer.(clocked); ok && resp.StatusCode == http.StatusUnauthorized {
 			estimateSkew(e, resp.Header, c.Clock())
 		}
@@ -188,6 +203,7 @@ func (t *Transport) do(ctx context.Context, method, path string, body []byte, ou
 		}
 		return e
 	}
+	t.limits.observe(class, resp.Header, nil, time.Now())
 	if out == nil || len(data) == 0 {
 		return nil
 	}
@@ -226,8 +242,9 @@ func estimateSkew(e *APIError, h http.Header, now time.Time) {
 }
 
 // retryable reports whether a GET that failed with err may succeed if sent
-// again: a 5xx the server may recover from, or a transport failure that was
-// not the caller cancelling.
+// again: a 5xx the server may recover from, a RATE_LIMIT_EXCEEDED 429 (the
+// other 429 codes are caps, not budgets that refill), or a transport failure
+// that was not the caller cancelling.
 func retryable(ctx context.Context, err error) bool {
 	var local localError
 	if err == nil || ctx.Err() != nil || errors.As(err, &local) {
@@ -236,6 +253,9 @@ func retryable(ctx context.Context, err error) bool {
 	var apiErr *APIError
 	if errors.As(err, &apiErr) {
 		s := apiErr.StatusCode
+		if s == http.StatusTooManyRequests {
+			return apiErr.Code == "" || apiErr.Code == "RATE_LIMIT_EXCEEDED"
+		}
 		return s >= 500 && s != http.StatusNotImplemented && s != http.StatusHTTPVersionNotSupported
 	}
 	// Decode failures are not transient; the same bytes fail again.

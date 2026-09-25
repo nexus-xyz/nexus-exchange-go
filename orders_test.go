@@ -198,17 +198,70 @@ func TestMutationsNeverRetried(t *testing.T) {
 		},
 		"setCOD": func(c *Client) error { _, err := c.Account().SetCancelOnDisconnect(ctx, true); return err },
 	} {
-		t.Run(name, func(t *testing.T) {
-			c, got := recorder(t, 503, `{"code":"unavailable","message":"try later"}`)
-			err := call(c)
-			var apiErr *APIError
-			if !errors.As(err, &apiErr) || apiErr.StatusCode != 503 {
-				t.Fatalf("err = %v, want a 503 APIError", err)
-			}
-			if len(got()) != 1 {
-				t.Fatalf("sent %d times, want exactly 1", len(got()))
-			}
-		})
+		for status, body := range map[int]string{
+			503: `{"code":"unavailable","message":"try later"}`,
+			429: `{"code":"RATE_LIMIT_EXCEEDED","message":"slow down","bucket":"order"}`,
+		} {
+			t.Run(name+"/"+strconv.Itoa(status), func(t *testing.T) {
+				c, got := recorder(t, status, body)
+				err := call(c)
+				var apiErr *APIError
+				if !errors.As(err, &apiErr) || apiErr.StatusCode != status {
+					t.Fatalf("err = %v, want a %d APIError", err, status)
+				}
+				if len(got()) != 1 {
+					t.Fatalf("sent %d times, want exactly 1", len(got()))
+				}
+			})
+		}
+	}
+}
+
+// TestCancelNotDelayedBySubmissionBacklog: with the order budget spent and a
+// backlog of submissions waiting on it, a cancel still goes out at once. The
+// client has no cancel budget to wait on, and never borrows the order one.
+func TestCancelNotDelayedBySubmissionBacklog(t *testing.T) {
+	var creates atomic.Int32
+	c := testClient(t, func(w http.ResponseWriter, r *http.Request) {
+		label := "cancel"
+		if r.Method == http.MethodPost {
+			creates.Add(1)
+			label = "order"
+		}
+		// Every budget reports itself spent, at one token a second.
+		w.Header().Set("X-Ratelimit-Limit", "1")
+		w.Header().Set("X-Ratelimit-Remaining", "0")
+		w.Header().Set("X-Ratelimit-Bucket", label)
+		io.WriteString(w, `{"order":`+orderJSON+`,"fills":[]}`)
+	})
+	if _, err := c.CreateOrder(context.Background(), OrderRequest{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Five more submissions queue behind the spent order budget.
+	backlog, stop := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	for range 5 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c.CreateOrder(backlog, OrderRequest{})
+		}()
+	}
+	defer func() { stop(); wg.Wait() }()
+	time.Sleep(50 * time.Millisecond)
+
+	for i := range 3 {
+		start := time.Now()
+		if _, err := c.CancelOrder(context.Background(), "o1", "BTC-USDX-PERP"); err != nil {
+			t.Fatal(err)
+		}
+		if d := time.Since(start); d > 200*time.Millisecond {
+			t.Fatalf("cancel %d took %v behind a submission backlog", i+1, d)
+		}
+	}
+	if n := creates.Load(); n != 1 {
+		t.Fatalf("%d creates reached the server; the backlog was not held, so the test proved nothing", n)
 	}
 }
 
