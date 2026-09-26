@@ -1,0 +1,94 @@
+# Endpoints the SDK targets, checked against the pinned spec (.api-version) by
+# TestSpecDrift in specdrift_test.go, which the spec-drift CI job runs. The
+# check validates this file BOTH ways:
+#   * every line must exist in the pinned spec (no removed, renamed or typo'd
+#     operation);
+#   * the set must equal the requests the SDK's exported methods actually send.
+#     The test calls every method against a recording server, so there is no
+#     hand-kept list of what the code calls.
+#
+# Add a line here whenever you add a method for a spec operation, or the check
+# fails. An operation the pinned spec does not define is not wrapped; the one
+# route the SDK sends outside the spec is named, with its reason, in offSpec in
+# specdrift_test.go. Format:
+#   METHOD /path   (path placeholders as the spec spells them, e.g. {market_id})
+#
+# Paths are the spec's. The SDK sends every route on the /v1 edge mount (see
+# network.go), so a line the spec declares only on the /api/v1 dual mount (the
+# bridge reads) is sent without that prefix: /v1/bridge/assets.
+
+# --- Public market data ---
+GET /markets
+GET /markets/summary
+GET /markets/{market_id}/mark-price
+GET /markets/{market_id}/risk-params
+GET /markets/{market_id}/status
+GET /markets/{market_id}/adl-events
+GET /markets/{market_id}/funding
+GET /markets/{market_id}/funding-samples
+GET /markets/{market_id}/ticker
+GET /markets/{market_id}/orderbook
+GET /markets/{market_id}/trades
+GET /markets/{market_id}/candles
+GET /tickers
+GET /status
+GET /stats
+GET /stats/history
+
+# --- Orders and positions ---
+POST /orders
+POST /orders/batch
+POST /orders/preview
+GET /orders
+DELETE /orders
+GET /orders/history
+GET /orders/{order_id}
+PATCH /orders/{order_id}
+DELETE /orders/{order_id}
+GET /fills
+GET /positions
+GET /positions/closed
+GET /funding
+
+# --- Account ---
+GET /account
+GET /account/cancel-on-disconnect
+PUT /account/cancel-on-disconnect
+POST /account/credit
+POST /account/deposit
+POST /account/margin
+GET /account/equity-history
+GET /account/fees
+GET /account/portfolio-history
+GET /account/rate-limit
+GET /account/state
+GET /account/summary
+GET /account/{address}/adl-history
+
+# --- Funds and bridge ---
+GET /deposits
+POST /deposits
+GET /withdrawals
+POST /faucet
+GET /api/v1/bridge/assets
+GET /api/v1/bridge/deposits
+GET /api/v1/bridge/deposits/{id}
+
+# --- Sign-in, API keys and agents ---
+POST /auth/login
+POST /keys
+GET /keys
+DELETE /keys/{key_id}
+POST /agents/register
+GET /agents
+DELETE /agents/{address}
+
+# --- Admin (WithAdminSecret) ---
+GET /admin/tiers
+PUT /admin/tiers
+DELETE /admin/tiers/{address}
+
+# --- WebSockets: the account socket mints a token, then upgrades ---
+POST /ws/token
+GET /ws
+GET /stream

@@ -91,8 +91,8 @@
 // times. The client paces itself on the budgets the server reports, charging
 // each call its weight from the pinned spec, and never delays a cancel (see
 // [Client] and [Client.CancelOrder]). A 429 is an [*APIError] matching
-// [ErrRateLimited] and carrying Retry-After. POST /orders/preview, which this
-// SDK does not wrap, is billed as an order: see [Client.CreateOrder].
+// [ErrRateLimited] and carrying Retry-After. [Client.PreviewOrder] is billed as
+// an order, not a read: see [Client.CreateOrder].
 //
 // # Streaming
 //

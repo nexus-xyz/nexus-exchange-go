@@ -10,6 +10,10 @@ import (
 // and its companion *Error field says why; it is never a made-up number.
 type Position = models.Position
 
+// ClosedPosition is a position that has closed, from
+// [Client.FetchPositionsHistory].
+type ClosedPosition = models.ClosedPosition
+
 // FetchPositions returns the account's open positions (GET /positions).
 //
 // It fails closed like [Account.FetchBalance]: an outage of the authoritative
@@ -21,4 +25,16 @@ func (c *Client) FetchPositions(ctx context.Context) ([]Position, error) {
 		return nil, err
 	}
 	return out, nil
+}
+
+// FetchPositionsHistory returns one page of the account's closed positions,
+// newest first (GET /positions/closed), and the cursor for the next page,
+// empty on the last.
+func (c *Client) FetchPositionsHistory(ctx context.Context, p Page) ([]ClosedPosition, string, error) {
+	var out []ClosedPosition
+	next, err := c.t.GetPage(ctx, "/positions/closed", p.query(), &out)
+	if err != nil {
+		return nil, "", err
+	}
+	return out, next, nil
 }

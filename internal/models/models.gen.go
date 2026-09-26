@@ -6,6 +6,7 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/oapi-codegen/nullable"
 	"github.com/oapi-codegen/runtime"
@@ -23,6 +24,84 @@ func (e AccountFundingDirection) Valid() bool {
 	case AccountFundingDirectionPaid:
 		return true
 	case AccountFundingDirectionReceived:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BridgeAssetSymbol.
+const (
+	BridgeAssetSymbolUSDC BridgeAssetSymbol = "USDC"
+	BridgeAssetSymbolUSDX BridgeAssetSymbol = "USDX"
+)
+
+// Valid indicates whether the value is a known member of the BridgeAssetSymbol enum.
+func (e BridgeAssetSymbol) Valid() bool {
+	switch e {
+	case BridgeAssetSymbolUSDC:
+		return true
+	case BridgeAssetSymbolUSDX:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BridgeDepositAsset.
+const (
+	BridgeDepositAssetUSDC BridgeDepositAsset = "USDC"
+	BridgeDepositAssetUSDX BridgeDepositAsset = "USDX"
+)
+
+// Valid indicates whether the value is a known member of the BridgeDepositAsset enum.
+func (e BridgeDepositAsset) Valid() bool {
+	switch e {
+	case BridgeDepositAssetUSDC:
+		return true
+	case BridgeDepositAssetUSDX:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BridgeDepositStatus.
+const (
+	BridgeDepositStatusConfirming BridgeDepositStatus = "confirming"
+	BridgeDepositStatusCredited   BridgeDepositStatus = "credited"
+	BridgeDepositStatusDetected   BridgeDepositStatus = "detected"
+	BridgeDepositStatusFailed     BridgeDepositStatus = "failed"
+)
+
+// Valid indicates whether the value is a known member of the BridgeDepositStatus enum.
+func (e BridgeDepositStatus) Valid() bool {
+	switch e {
+	case BridgeDepositStatusConfirming:
+		return true
+	case BridgeDepositStatusCredited:
+		return true
+	case BridgeDepositStatusDetected:
+		return true
+	case BridgeDepositStatusFailed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ClosedPositionSide.
+const (
+	ClosedPositionSideLong  ClosedPositionSide = "Long"
+	ClosedPositionSideShort ClosedPositionSide = "Short"
+)
+
+// Valid indicates whether the value is a known member of the ClosedPositionSide enum.
+func (e ClosedPositionSide) Valid() bool {
+	switch e {
+	case ClosedPositionSideLong:
+		return true
+	case ClosedPositionSideShort:
 		return true
 	default:
 		return false
@@ -59,6 +138,48 @@ func (e FillTakerOrMaker) Valid() bool {
 	case FillTakerOrMakerMaker:
 		return true
 	case FillTakerOrMakerTaker:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FundsEntryKind.
+const (
+	FundsEntryKindDeposit    FundsEntryKind = "deposit"
+	FundsEntryKindFaucet     FundsEntryKind = "faucet"
+	FundsEntryKindWithdrawal FundsEntryKind = "withdrawal"
+)
+
+// Valid indicates whether the value is a known member of the FundsEntryKind enum.
+func (e FundsEntryKind) Valid() bool {
+	switch e {
+	case FundsEntryKindDeposit:
+		return true
+	case FundsEntryKindFaucet:
+		return true
+	case FundsEntryKindWithdrawal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FundsEntryStatus.
+const (
+	FundsEntryStatusConfirmed FundsEntryStatus = "confirmed"
+	FundsEntryStatusFailed    FundsEntryStatus = "failed"
+	FundsEntryStatusPending   FundsEntryStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the FundsEntryStatus enum.
+func (e FundsEntryStatus) Valid() bool {
+	switch e {
+	case FundsEntryStatusConfirmed:
+		return true
+	case FundsEntryStatusFailed:
+		return true
+	case FundsEntryStatusPending:
 		return true
 	default:
 		return false
@@ -383,6 +504,69 @@ func (e TradeSide) Valid() bool {
 	}
 }
 
+// Defines values for WithdrawalStatus.
+const (
+	WithdrawalStatusFailed  WithdrawalStatus = "failed"
+	WithdrawalStatusPending WithdrawalStatus = "pending"
+	WithdrawalStatusSettled WithdrawalStatus = "settled"
+)
+
+// Valid indicates whether the value is a known member of the WithdrawalStatus enum.
+func (e WithdrawalStatus) Valid() bool {
+	switch e {
+	case WithdrawalStatusFailed:
+		return true
+	case WithdrawalStatusPending:
+		return true
+	case WithdrawalStatusSettled:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListBridgeDepositsParamsAsset.
+const (
+	ListBridgeDepositsParamsAssetUSDC ListBridgeDepositsParamsAsset = "USDC"
+	ListBridgeDepositsParamsAssetUSDX ListBridgeDepositsParamsAsset = "USDX"
+)
+
+// Valid indicates whether the value is a known member of the ListBridgeDepositsParamsAsset enum.
+func (e ListBridgeDepositsParamsAsset) Valid() bool {
+	switch e {
+	case ListBridgeDepositsParamsAssetUSDC:
+		return true
+	case ListBridgeDepositsParamsAssetUSDX:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListBridgeDepositsParamsStatus.
+const (
+	ListBridgeDepositsParamsStatusConfirming ListBridgeDepositsParamsStatus = "confirming"
+	ListBridgeDepositsParamsStatusCredited   ListBridgeDepositsParamsStatus = "credited"
+	ListBridgeDepositsParamsStatusDetected   ListBridgeDepositsParamsStatus = "detected"
+	ListBridgeDepositsParamsStatusFailed     ListBridgeDepositsParamsStatus = "failed"
+)
+
+// Valid indicates whether the value is a known member of the ListBridgeDepositsParamsStatus enum.
+func (e ListBridgeDepositsParamsStatus) Valid() bool {
+	switch e {
+	case ListBridgeDepositsParamsStatusConfirming:
+		return true
+	case ListBridgeDepositsParamsStatusCredited:
+		return true
+	case ListBridgeDepositsParamsStatusDetected:
+		return true
+	case ListBridgeDepositsParamsStatusFailed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for FetchOHLCVParamsTimeframe.
 const (
 	FetchOHLCVParamsTimeframeN1h FetchOHLCVParamsTimeframe = "1h"
@@ -407,6 +591,30 @@ func (e FetchOHLCVParamsTimeframe) Valid() bool {
 	}
 }
 
+// AccountFees The authenticated account's effective fee schedule, mirroring Hyperliquid `userFees`. Reports what the venue charges today: there are no per-account fee tiers or discounts yet (fee model still a draft), so `tier` is `base` and `discounts` is empty. The rate is the forward-looking schedule rate scoped by `schedule`, not a realized per-fill average.
+type AccountFees struct {
+	// Discounts Active fee discounts applied to the account. Currently always empty — no discount program exists yet.
+	Discounts []FeeDiscount `json:"discounts"`
+
+	// MakerFeeBps Effective maker fee in basis points. Negative means the maker is *paid* a rebate — e.g. -2 is a 0.02% rebate.
+	MakerFeeBps int `json:"maker_fee_bps"`
+
+	// Schedule Scope of the reported rate. Currently always `standard`. The venue charges a per-market schedule (standard crypto, mid-cap crypto, FX, commodities/indices all differ, and the split varies by deploy config), but this endpoint takes no market parameter, so it reports the standard crypto-group schedule and marks it here. Treat the rate as scoped by this value, not a venue-wide guarantee; per-market effective rates are a planned follow-up. Treat as an open string — new scopes may appear.
+	Schedule string `json:"schedule"`
+
+	// TakerFeeBps Effective taker fee in basis points — e.g. 5 is a 0.05% fee.
+	TakerFeeBps int `json:"taker_fee_bps"`
+
+	// Tier Fee tier for the account. Currently always `base`: there are no per-account fee tiers yet (distinct from rate-limit tiers). New values may appear when the fee model lands, so treat this as an open string.
+	Tier string `json:"tier"`
+
+	// Volume30d Rolling 30-day traded notional for the account, as a decimal string. Best-effort — see `volume_30d_estimated`.
+	Volume30d Decimal `json:"volume_30d"`
+
+	// Volume30dEstimated `true` when `volume_30d` may undercount: the source fill buffer was at capacity, so some older in-window fills may have been evicted. `false` when the full 30-day window is covered.
+	Volume30dEstimated bool `json:"volume_30d_estimated"`
+}
+
 // AccountFunding A funding payment for the account.
 type AccountFunding struct {
 	// Amount Signed funding amount.
@@ -426,6 +634,47 @@ type AccountFunding struct {
 
 // AccountFundingDirection defines model for AccountFunding.Direction.
 type AccountFundingDirection string
+
+// AccountPortfolioSummary Portfolio summary for the authenticated account (aggregate equity, PnL, volume, open counts).
+type AccountPortfolioSummary struct {
+	// AvailableMargin Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	AvailableMargin *Decimal `json:"available_margin,omitempty"`
+
+	// Collateral Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	Collateral *Decimal `json:"collateral,omitempty"`
+
+	// EarlyAccessAllowed Present only when the early-access gate is active.
+	EarlyAccessAllowed *bool `json:"early_access_allowed,omitempty"`
+
+	// MarginUsed Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	MarginUsed         *Decimal `json:"margin_used,omitempty"`
+	OpenOrdersCount    *int     `json:"open_orders_count,omitempty"`
+	OpenPositionsCount *int     `json:"open_positions_count,omitempty"`
+
+	// TotalEquity Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	TotalEquity *Decimal `json:"total_equity,omitempty"`
+
+	// TotalRealizedPnl24h Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	TotalRealizedPnl24h *Decimal `json:"total_realized_pnl_24h,omitempty"`
+
+	// TotalUnrealizedPnl Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	TotalUnrealizedPnl *Decimal `json:"total_unrealized_pnl,omitempty"`
+
+	// TotalVolume24h Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	TotalVolume24h *Decimal `json:"total_volume_24h,omitempty"`
+
+	// Withdrawable Wallet-withdrawable balance: engine-authoritative free margin floored at zero (`max(0, available_margin)`). Free margin already nets each position's initial margin and pre-trade order reservations out of equity, so this is exactly what can leave the account. A negative free margin (an underwater account) is clamped to `"0"` and never surfaced negative. Derived from the authoritative margin view — the endpoint fails closed with `502` rather than reporting a local estimate when that view is unavailable.
+	Withdrawable *Decimal `json:"withdrawable,omitempty"`
+}
+
+// AccountState Consolidated single-call account snapshot — the portfolio summary aggregates plus all open positions — matching Hyperliquid `clearinghouseState` ergonomics. Both parts are built from one coherent read, so `summary.open_positions_count` always equals the length of `positions`, and the embedded `summary` is identical to the standalone `/account/summary` response.
+type AccountState struct {
+	// Positions All open positions for the account.
+	Positions []Position `json:"positions"`
+
+	// Summary Portfolio summary for the authenticated account (aggregate equity, PnL, volume, open counts).
+	Summary AccountPortfolioSummary `json:"summary"`
+}
 
 // AccountSummary defines model for AccountSummary.
 type AccountSummary struct {
@@ -520,6 +769,112 @@ type AmendOrderRequest struct {
 	Size *Decimal `json:"size,omitempty"`
 }
 
+// BridgeAsset A bridgeable asset on a specific chain.
+type BridgeAsset struct {
+	// Confirmations Block confirmations required before a deposit is credited.
+	Confirmations int `json:"confirmations"`
+
+	// ContractAddress 0x token contract address on the chain; null for a chain-native representation.
+	ContractAddress nullable.Nullable[string] `json:"contract_address,omitempty"`
+
+	// Decimals On-chain token decimals for this asset on this chain.
+	Decimals int `json:"decimals"`
+
+	// Fee Flat fee charged in units of the asset (may be "0").
+	Fee *Decimal `json:"fee,omitempty"`
+
+	// MinAmount Minimum amount accepted for a single deposit.
+	MinAmount Decimal `json:"min_amount"`
+
+	// Symbol Asset symbol. Phase A supports USDC and USDX only (USDT is out of scope for this cut).
+	Symbol BridgeAssetSymbol `json:"symbol"`
+}
+
+// BridgeAssetSymbol Asset symbol. Phase A supports USDC and USDX only (USDT is out of scope for this cut).
+type BridgeAssetSymbol string
+
+// BridgeAssetsResponse Supported bridge chains and their deposit/withdraw assets.
+type BridgeAssetsResponse struct {
+	Chains []BridgeChainAssets `json:"chains"`
+}
+
+// BridgeChainAssets Bridgeable assets for one chain.
+type BridgeChainAssets struct {
+	// Chain Chain identifier, e.g. `ethereum` or `base`.
+	Chain string `json:"chain"`
+
+	// ChainId EVM chain ID, when applicable.
+	ChainId nullable.Nullable[int64] `json:"chain_id,omitempty"`
+
+	// DepositAssets Assets that can be deposited from this chain (USDC, USDX).
+	DepositAssets []BridgeAsset `json:"deposit_assets"`
+
+	// WithdrawAssets Assets that can be withdrawn to this chain (USDX). Withdrawal endpoints are a later phase; this lists the eventual capability.
+	WithdrawAssets []BridgeAsset `json:"withdraw_assets"`
+}
+
+// BridgeDeposit A cross-chain deposit tracked by the watcher (read model).
+type BridgeDeposit struct {
+	// AccountId 0x-prefixed Nexus account being credited.
+	AccountId string `json:"account_id"`
+
+	// Address Deposit address the funds arrived at.
+	Address string `json:"address"`
+
+	// Amount Deposit amount in units of `asset`.
+	Amount Decimal `json:"amount"`
+
+	// Asset Deposited asset.
+	Asset BridgeDepositAsset `json:"asset"`
+
+	// Chain Source chain.
+	Chain string `json:"chain"`
+
+	// Confirmations Confirmations observed so far; null before the tx is seen on chain.
+	Confirmations nullable.Nullable[int] `json:"confirmations,omitempty"`
+
+	// CreatedAt Unix epoch timestamp in milliseconds.
+	CreatedAt TimestampMs `json:"created_at"`
+
+	// CreditedAt Unix ms when the deposit was credited; null until `status` is `credited`.
+	CreditedAt nullable.Nullable[TimestampMs] `json:"credited_at,omitempty"`
+
+	// Id Opaque, stable deposit identifier.
+	Id string `json:"id"`
+
+	// RequiredConfirmations Confirmations required before crediting.
+	RequiredConfirmations nullable.Nullable[int] `json:"required_confirmations,omitempty"`
+
+	// Status Lifecycle: `detected` → `confirming` → `credited` | `failed`.
+	Status BridgeDepositStatus `json:"status"`
+
+	// TxHash Source-chain transaction hash; null until detected.
+	TxHash nullable.Nullable[string] `json:"tx_hash,omitempty"`
+
+	// UpdatedAt Unix epoch timestamp in milliseconds.
+	UpdatedAt *TimestampMs `json:"updated_at,omitempty"`
+}
+
+// BridgeDepositAsset Deposited asset.
+type BridgeDepositAsset string
+
+// BridgeDepositStatus Lifecycle: `detected` → `confirming` → `credited` | `failed`.
+type BridgeDepositStatus string
+
+// BridgeError Error envelope returned by all non-2xx /v1/bridge responses.
+type BridgeError struct {
+	Error struct {
+		// Code Machine-readable, stable error code (snake_case), e.g. `unsupported_chain`, `amount_below_minimum`, `deposit_not_found`.
+		Code string `json:"code"`
+
+		// Details Optional structured context for the error.
+		Details *map[string]interface{} `json:"details,omitempty"`
+
+		// Message Human-readable description; not intended for programmatic matching.
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
 // CancelOnDisconnectStatus Cancel-on-disconnect status for the authenticated account.
 type CancelOnDisconnectStatus struct {
 	// Active Whether COD will actually fire for this account: the account opt-in AND the exchange-side feature switch. When `enabled` is true but `active` is false, the exchange has the feature switched off and no cancel fires on disconnect.
@@ -531,6 +886,86 @@ type CancelOnDisconnectStatus struct {
 	// GraceSecs Seconds the exchange waits after the last `/ws` disconnect before cancelling; a reconnect within the window disarms the cancel. Null when the feature is unavailable on this deployment.
 	GraceSecs nullable.Nullable[int] `json:"grace_secs,omitempty"`
 }
+
+// ClosedPosition A closed position record.
+type ClosedPosition struct {
+	// ClosedAtMs Unix epoch timestamp in milliseconds.
+	ClosedAtMs *TimestampMs `json:"closed_at_ms,omitempty"`
+
+	// EntryPrice Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	EntryPrice *Decimal `json:"entry_price,omitempty"`
+
+	// ExitPrice Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	ExitPrice *Decimal `json:"exit_price,omitempty"`
+	MarketId  *string  `json:"market_id,omitempty"`
+
+	// RealizedPnl Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	RealizedPnl *Decimal `json:"realized_pnl,omitempty"`
+
+	// Side The side the position was before it closed.
+	Side *ClosedPositionSide `json:"side,omitempty"`
+
+	// Size Absolute size at close.
+	Size *Decimal `json:"size,omitempty"`
+}
+
+// ClosedPositionSide The side the position was before it closed.
+type ClosedPositionSide string
+
+// CreditRequest defines model for CreditRequest.
+type CreditRequest struct {
+	// Amount Synthetic USDX to credit (decimal string). Omit to claim the full remaining daily allowance.
+	Amount *Decimal `json:"amount,omitempty"`
+}
+
+// CreditResponse defines model for CreditResponse.
+type CreditResponse struct {
+	// Amount USDX credited by this request (decimal string).
+	Amount Decimal `json:"amount"`
+
+	// CreditedToday Total USDX credited to this API key so far today (decimal string).
+	CreditedToday Decimal `json:"credited_today"`
+
+	// DailyLimit Per-API-key daily credit allowance in USDX (decimal string).
+	DailyLimit Decimal `json:"daily_limit"`
+}
+
+// DepositRequest defines model for DepositRequest.
+type DepositRequest struct {
+	// Amount Deposit amount (positive decimal string).
+	Amount Decimal `json:"amount"`
+
+	// Asset Asset symbol; defaults to USDX.
+	Asset *string `json:"asset,omitempty"`
+}
+
+// DepositResponse Engine deposit acknowledgement (forwarded). Includes the updated authoritative balance.
+type DepositResponse struct {
+	// Balance Authoritative post-deposit balance.
+	Balance              *Decimal               `json:"balance,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// EquityPoint One equity sample (balance + unrealized PnL) for the account, 5s cadence.
+type EquityPoint struct {
+	// Equity Account equity at sample time.
+	Equity *json.Number `json:"equity,omitempty"`
+
+	// TimestampMs Unix epoch timestamp in milliseconds.
+	TimestampMs *TimestampMs `json:"timestamp_ms,omitempty"`
+}
+
+// FaucetResponse Testnet faucet credit result.
+type FaucetResponse struct {
+	// Amount Amount credited.
+	Amount *Decimal `json:"amount,omitempty"`
+
+	// AvailableAtMs Earliest time the faucet may be claimed again.
+	AvailableAtMs *TimestampMs `json:"available_at_ms,omitempty"`
+}
+
+// FeeDiscount An active fee discount applied to the account. The concrete shape is provisional and finalizes with the fee model (tiers and discounts are still a draft); `discounts` is currently always empty, so no properties are guaranteed yet. Additional properties may be added additively once the model lands.
+type FeeDiscount map[string]interface{}
 
 // Fill A single trade execution for the authenticated account
 type Fill struct {
@@ -597,6 +1032,29 @@ type FundingSample struct {
 	// Timestamp Unix epoch timestamp in milliseconds.
 	Timestamp *TimestampMs `json:"timestamp,omitempty"`
 }
+
+// FundsEntry A deposit or withdrawal ledger entry.
+type FundsEntry struct {
+	// Account 0x-prefixed account address.
+	Account *string `json:"account,omitempty"`
+
+	// Amount Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	Amount *Decimal          `json:"amount,omitempty"`
+	Asset  *string           `json:"asset,omitempty"`
+	Id     *int64            `json:"id,omitempty"`
+	Kind   *FundsEntryKind   `json:"kind,omitempty"`
+	Status *FundsEntryStatus `json:"status,omitempty"`
+
+	// Timestamp Unix epoch timestamp in milliseconds.
+	Timestamp *TimestampMs              `json:"timestamp,omitempty"`
+	TxHash    nullable.Nullable[string] `json:"tx_hash,omitempty"`
+}
+
+// FundsEntryKind defines model for FundsEntry.Kind.
+type FundsEntryKind string
+
+// FundsEntryStatus defines model for FundsEntry.Status.
+type FundsEntryStatus string
 
 // JurisdictionError Error body returned with a `403` from a jurisdiction control. Flat `code`/`message`, matching the other top-level error bodies in this contract (`unauthorized`, `credits_frozen`) rather than the nested `BridgeError` envelope, which is scoped to `/v1/bridge`.
 type JurisdictionError struct {
@@ -976,6 +1434,41 @@ type Position struct {
 // PositionSide defines model for Position.Side.
 type PositionSide string
 
+// PreviewResponse Pre-trade preview: projects the margin/equity/fee impact of an order without submitting it.
+type PreviewResponse struct {
+	Accepted         *bool                      `json:"accepted,omitempty"`
+	ExpectedFillVwap nullable.Nullable[Decimal] `json:"expected_fill_vwap,omitempty"`
+
+	// ProjectedFees Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	ProjectedFees *Decimal `json:"projected_fees,omitempty"`
+
+	// ProjectedPostTradeEquity Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	ProjectedPostTradeEquity *Decimal `json:"projected_post_trade_equity,omitempty"`
+
+	// ProjectedPostTradeLeverage Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	ProjectedPostTradeLeverage         *Decimal                   `json:"projected_post_trade_leverage,omitempty"`
+	ProjectedPostTradeLiquidationPrice nullable.Nullable[Decimal] `json:"projected_post_trade_liquidation_price,omitempty"`
+	RejectReason                       nullable.Nullable[string]  `json:"reject_reason,omitempty"`
+
+	// RequiredInitialMargin Arbitrary-precision decimal serialized as a string (lossless). Parse with a decimal type, never a float.
+	RequiredInitialMargin *Decimal `json:"required_initial_margin,omitempty"`
+}
+
+// RateLimitStatus Rate-limit state for the **request** class only — the per-key and per-owner buckets. It does not report the trading-action bucket that order writes are charged to, nor any WebSocket ceiling, so full `remaining` here is not evidence of order-placement headroom. See “Rate limits” in the API description.
+type RateLimitStatus struct {
+	// Limit Budget of request **weight** per second — not a count of requests. Most requests cost one unit, heavy aggregate reads cost more, and a batch order submit scales with its size (see `x-nexus-rate-limit-weight` and “Rate limits”). Also the burst capacity — the token bucket holds one second's worth of tokens — so `remaining` never exceeds it. Null for the unlimited tier, which is bucketed per client IP instead.
+	Limit nullable.Nullable[int] `json:"limit"`
+
+	// Remaining Tokens currently in the bucket, expressed as **unit-cost requests**: a value of 10 means ten weight-1 requests, or two requests weighing 5. Divide by an operation's weight to get how many of *that* call you can still make. Null for the unlimited tier.
+	Remaining nullable.Nullable[int] `json:"remaining"`
+
+	// ResetAtMs Unix timestamp in milliseconds when the bucket refills back to `limit`; `0` when it is already full. The bucket refills continuously rather than in discrete windows, so tokens are available before this time — it is when the budget is whole again, not when the next request is permitted. Null for the unlimited tier.
+	ResetAtMs nullable.Nullable[int] `json:"reset_at_ms"`
+
+	// Tier Rate limit tier name (e.g. `pro`, `marketmaker`, `unlimited`). Tiers are multipliers on one model, not different models.
+	Tier string `json:"tier"`
+}
+
 // ServiceHealth Aggregate health for the indexer/engine/oracle/bots, consumed by status.nexus.xyz. The `services` object carries per-component detail; only the common fields are documented here.
 type ServiceHealth struct {
 	// Services Per-component status (indexer, engine, oracle, bots). Component detail is informational and may evolve; clients should rely on the top-level `status`.
@@ -1080,11 +1573,35 @@ type Trade struct {
 // TradeSide defines model for Trade.Side.
 type TradeSide string
 
+// Withdrawal A single withdrawal record for the authenticated account
+type Withdrawal struct {
+	// Amount Withdrawn amount in USDX (decimal string)
+	Amount Decimal `json:"amount"`
+
+	// Id Withdrawal ID
+	Id string `json:"id"`
+
+	// Status Withdrawal lifecycle status
+	Status WithdrawalStatus `json:"status"`
+
+	// Timestamp Unix ms
+	Timestamp TimestampMs `json:"timestamp"`
+}
+
+// WithdrawalStatus Withdrawal lifecycle status
+type WithdrawalStatus string
+
 // Cursor defines model for Cursor.
 type Cursor = string
 
 // MarketId defines model for MarketId.
 type MarketId = string
+
+// AuthoritativeMarginUnavailable defines model for AuthoritativeMarginUnavailable.
+type AuthoritativeMarginUnavailable interface{}
+
+// BridgeNotFound Error envelope returned by all non-2xx /v1/bridge responses.
+type BridgeNotFound = BridgeError
 
 // RateLimited defines model for RateLimited.
 type RateLimited interface{}
@@ -1094,6 +1611,47 @@ type RestrictedJurisdiction = JurisdictionError
 
 // Unauthorized defines model for Unauthorized.
 type Unauthorized interface{}
+
+// FetchEquityHistoryParams defines parameters for FetchEquityHistory.
+type FetchEquityHistoryParams struct {
+	// Limit Maximum points to return (capped at 720).
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque pagination cursor returned in the previous response's `X-Next-Cursor` header. Omit to fetch the first page. Treat the token as opaque: its format is not part of the contract and may change. Cursors do not expire. A malformed (unparseable) cursor is not an error — the server serves the first page. A well-formed cursor whose exact position has since been evicted from the retained window is not reset to the first page: pagination resumes at the nearest surviving boundary, so a resumed response is a continuation, not a fresh first page.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// FetchAdlHistoryParams defines parameters for FetchAdlHistory.
+type FetchAdlHistoryParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListBridgeDepositsParams defines parameters for ListBridgeDeposits.
+type ListBridgeDepositsParams struct {
+	// Limit Maximum records to return.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Chain Filter by source chain.
+	Chain *string `form:"chain,omitempty" json:"chain,omitempty"`
+
+	// Asset Filter by deposited asset.
+	Asset *ListBridgeDepositsParamsAsset `form:"asset,omitempty" json:"asset,omitempty"`
+
+	// Status Filter by deposit status.
+	Status *ListBridgeDepositsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListBridgeDepositsParamsAsset defines parameters for ListBridgeDeposits.
+type ListBridgeDepositsParamsAsset string
+
+// ListBridgeDepositsParamsStatus defines parameters for ListBridgeDeposits.
+type ListBridgeDepositsParamsStatus string
+
+// FetchDepositsParams defines parameters for FetchDeposits.
+type FetchDepositsParams struct {
+	// Limit Maximum records to return
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
 
 // FetchFillsParams defines parameters for FetchFills.
 type FetchFillsParams struct {
@@ -1180,10 +1738,25 @@ type EditOrderParams struct {
 	MarketId string `form:"market_id" json:"market_id"`
 }
 
+// FetchClosedPositionsParams defines parameters for FetchClosedPositions.
+type FetchClosedPositionsParams struct {
+	// Limit Maximum records to return
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque pagination cursor returned in the previous response's `X-Next-Cursor` header. Omit to fetch the first page. Treat the token as opaque: its format is not part of the contract and may change. Cursors do not expire. A malformed (unparseable) cursor is not an error — the server serves the first page. A well-formed cursor whose exact position has since been evicted from the retained window is not reset to the first page: pagination resumes at the nearest surviving boundary, so a resumed response is a continuation, not a fresh first page.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // ConnectStreamParams defines parameters for ConnectStream.
 type ConnectStreamParams struct {
 	// Token Short-lived token from POST /ws-tokens
 	Token string `form:"token" json:"token"`
+}
+
+// FetchWithdrawalsParams defines parameters for FetchWithdrawals.
+type FetchWithdrawalsParams struct {
+	// Limit Maximum records to return
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ConnectWebSocketParams defines parameters for ConnectWebSocket.
@@ -1195,11 +1768,17 @@ type ConnectWebSocketParams struct {
 // SetCancelOnDisconnectJSONRequestBody defines body for SetCancelOnDisconnect for application/json ContentType.
 type SetCancelOnDisconnectJSONRequestBody = SetCancelOnDisconnectRequest
 
+// CreditJSONRequestBody defines body for Credit for application/json ContentType.
+type CreditJSONRequestBody = CreditRequest
+
 // RegisterAgentJSONRequestBody defines body for RegisterAgent for application/json ContentType.
 type RegisterAgentJSONRequestBody = AgentRegistrationRequest
 
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
+
+// CreateDepositJSONRequestBody defines body for CreateDeposit for application/json ContentType.
+type CreateDepositJSONRequestBody = DepositRequest
 
 // CreateOrderJSONRequestBody defines body for CreateOrder for application/json ContentType.
 type CreateOrderJSONRequestBody = OrderRequest
@@ -1207,8 +1786,79 @@ type CreateOrderJSONRequestBody = OrderRequest
 // CreateOrdersBatchJSONRequestBody defines body for CreateOrdersBatch for application/json ContentType.
 type CreateOrdersBatchJSONRequestBody = CreateOrdersBatchJSONBody
 
+// PreviewOrderJSONRequestBody defines body for PreviewOrder for application/json ContentType.
+type PreviewOrderJSONRequestBody = OrderRequest
+
 // EditOrderJSONRequestBody defines body for EditOrder for application/json ContentType.
 type EditOrderJSONRequestBody = AmendOrderRequest
+
+// Getter for additional properties for DepositResponse. Returns the specified
+// element and whether it was found
+func (a DepositResponse) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DepositResponse
+func (a *DepositResponse) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DepositResponse to handle AdditionalProperties
+func (a *DepositResponse) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["balance"]; found {
+		err = json.Unmarshal(raw, &a.Balance)
+		if err != nil {
+			return fmt.Errorf("error reading 'balance': %w", err)
+		}
+		delete(object, "balance")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DepositResponse to handle AdditionalProperties
+func (a DepositResponse) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Balance != nil {
+		object["balance"], err = json.Marshal(a.Balance)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'balance': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
 
 // AsOrderCancellationReason1 returns the union data inside the Order_CancellationReason as a OrderCancellationReason1
 func (t Order_CancellationReason) AsOrderCancellationReason1() (OrderCancellationReason1, error) {

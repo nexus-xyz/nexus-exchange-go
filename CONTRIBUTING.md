@@ -82,6 +82,28 @@ test's doc comment. A new exported method on `Client` or `Account` needs a row
 in `laneOps` or a reason in `unmeasured`; `go test ./...` fails until it has
 one.
 
+## Spec drift
+
+`endpoints.txt` lists every spec operation the SDK sends, as the sibling SDKs'
+files do. `TestSpecDrift` (`specdrift_test.go`) calls every exported method of
+`Client` and `Account` against a recording server and fails when the requests
+they send and that list differ, either way. That half needs no spec and runs
+in `go test ./...`. The `spec-drift` CI job fetches the pinned spec and adds the
+other half: every line must be an operation of that spec, and every method must
+be named for the operation it reaches (R2.25: `FetchTradingFees` for
+`fetchTradingFees`). To run it locally:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/nexus-xyz/nexus-exchange-api/$(cat .api-version)/openapi.json -o /tmp/openapi.pinned.json
+NEXUS_SPEC=/tmp/openapi.pinned.json go test -run '^TestSpecDrift$' -v .
+```
+
+A new method therefore needs a line in `endpoints.txt`, and a call in either
+`laneOps` or `driftCalls` so the test drives it. The spec renamed some
+operations after the pinned release; `renamedAhead` maps those, and each entry
+fails as stale once the pin carries the new name. `offSpec` names the one route
+the SDK sends outside the spec.
+
 ## API version
 
 `.api-version` pins the released
