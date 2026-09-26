@@ -200,17 +200,29 @@ func TestGoDriftBothWays(t *testing.T) {
 // unmeasured is every exported REST-surface method the lane does not call,
 // with the reason.
 var unmeasured = map[string]string{
-	"Client.Account":           "groups the Account methods, which are rows; sends nothing",
-	"Client.AccountAddress":    "reads GET /account/deposit-target, outside the v1 surface; TestTestnetLogin checks it",
-	"Client.FetchOHLCVHistory": "pages fetchOHLCV, which Client.FetchOHLCV measures; TestTestnetFetchOHLCVHistory walks it",
-	"Client.MarketStream":      "WebSocket: the spec declares no frame schema to join against",
-	"Client.Subscribe":         "WebSocket: the spec declares no frame schema to join against",
-	"Client.Login":             "wallet-signed sign-in; TestTestnetLogin drives it",
-	"Client.CreateAPIKey":      "session auth (bearerAuth), which an API key cannot drive; TestTestnetLogin does",
-	"Client.FetchAPIKeys":      "session auth (bearerAuth), which an API key cannot drive; TestTestnetLogin does",
-	"Client.DeleteAPIKey":      "session auth (bearerAuth), which an API key cannot drive; TestTestnetLogin does",
-	"Client.RegisterAgent":     "wallet-signed registration; TestTestnetLogin drives it",
-	"Client.RevokeAgent":       "needs an agent the run registered; TestTestnetLogin drives it",
+	"Client.Account":             "groups the Account methods, which are rows; sends nothing",
+	"Client.AccountAddress":      "reads GET /account/deposit-target, outside the v1 surface; TestTestnetLogin checks it",
+	"Client.FetchOHLCVHistory":   "pages fetchOHLCV, which Client.FetchOHLCV measures; TestTestnetFetchOHLCVHistory walks it",
+	"Client.MarketStream":        "WebSocket: the spec declares no frame schema to join against",
+	"Client.Subscribe":           "WebSocket: the spec declares no frame schema to join against",
+	"Client.Login":               "wallet-signed sign-in; TestTestnetLogin drives it",
+	"Client.CreateAPIKey":        "session auth (bearerAuth), which an API key cannot drive; TestTestnetLogin does",
+	"Client.FetchAPIKeys":        "session auth (bearerAuth), which an API key cannot drive; TestTestnetLogin does",
+	"Client.DeleteAPIKey":        "session auth (bearerAuth), which an API key cannot drive; TestTestnetLogin does",
+	"Client.RegisterAgent":       "wallet-signed registration; TestTestnetLogin drives it",
+	"Client.RevokeAgent":         "needs an agent the run registered; TestTestnetLogin drives it",
+	"Client.FetchBridgeAssets":   "the pinned spec declares it only on the /api/v1 dual mount, which the spec join skips",
+	"Client.FetchBridgeDeposits": "the pinned spec declares it only on the /api/v1 dual mount, which the spec join skips",
+	"Client.FetchBridgeDeposit":  "the pinned spec declares it only on the /api/v1 dual mount, which the spec join skips",
+	"Client.FetchTiers":          "admin secret (adminAuth), which the lane does not hold",
+	"Client.SetTier":             "admin secret (adminAuth), which the lane does not hold",
+	"Client.DeleteTier":          "admin secret (adminAuth), which the lane does not hold",
+	"Client.PreviewOrder":        "billed as an order; the write tier places real orders instead",
+	"Client.CreateDeposit":       "moves collateral; not part of the write tier",
+	"Client.ClaimFaucet":         "moves collateral; not part of the write tier",
+	"Account.Deposit":            "moves collateral; not part of the write tier",
+	"Account.AddMargin":          "needs an open isolated position, which the write tier never holds",
+	"Account.ClaimCredit":        "write tier setup, not a measured row: it fails once the day's allowance is claimed",
 }
 
 // laneOps is the lane, in run order. Tier (public or private) is not written
@@ -252,6 +264,28 @@ func laneOps(c *Client, market string, w *writeTier) []conformance.Op {
 			_, _, err := c.FetchMyTrades(ctx, Page{Limit: 5})
 			return err
 		}},
+		{ID: "fetchAccountFees", Method: "Account.FetchTradingFees", Call: call(func(ctx context.Context) (any, error) { return c.Account().FetchTradingFees(ctx) })},
+		{ID: "fetchRateLimitStatus", Method: "Account.FetchRateLimitStatus", Call: call(func(ctx context.Context) (any, error) { return c.Account().FetchRateLimitStatus(ctx) })},
+		{ID: "fetchAccountState", Method: "Account.FetchAccountState", Call: call(func(ctx context.Context) (any, error) { return c.Account().FetchAccountState(ctx) })},
+		{ID: "fetchAccountSummary", Method: "Account.FetchAccountSummary", Call: call(func(ctx context.Context) (any, error) { return c.Account().FetchAccountSummary(ctx) })},
+		{ID: "fetchPortfolioHistory", Method: "Account.FetchPortfolioHistory", Call: call(func(ctx context.Context) (any, error) { return c.Account().FetchPortfolioHistory(ctx, "day", 5) })},
+		{ID: "fetchEquityHistory", Method: "Account.FetchEquityHistory", Call: func(ctx context.Context) error {
+			_, _, err := c.Account().FetchEquityHistory(ctx, Page{Limit: 5})
+			return err
+		}},
+		{ID: "fetchClosedPositions", Method: "Client.FetchPositionsHistory", Call: func(ctx context.Context) error {
+			_, _, err := c.FetchPositionsHistory(ctx, Page{Limit: 5})
+			return err
+		}},
+		{ID: "fetchAdlHistory", Method: "Client.FetchAdlHistory", Call: call(func(ctx context.Context) (any, error) {
+			addr, err := c.AccountAddress(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return c.FetchAdlHistory(ctx, addr, 5)
+		})},
+		{ID: "fetchDeposits", Method: "Client.FetchDeposits", Call: call(func(ctx context.Context) (any, error) { return c.FetchDeposits(ctx, 5) })},
+		{ID: "fetchWithdrawals", Method: "Client.FetchWithdrawals", Call: call(func(ctx context.Context) (any, error) { return c.FetchWithdrawals(ctx, 5) })},
 		{ID: "listAgents", Method: "Client.FetchAgents", Call: call(func(ctx context.Context) (any, error) { return c.FetchAgents(ctx) })},
 		{ID: "fetchCancelOnDisconnect", Method: "Account.FetchCancelOnDisconnect", Call: func(ctx context.Context) error {
 			s, err := c.Account().FetchCancelOnDisconnect(ctx)
@@ -355,10 +389,10 @@ const assumedBandBps = 500
 // three quarters, leaving the rest as headroom for the mark moving while the
 // run reads.
 func (w *writeTier) prepare(ctx context.Context, c *Client) error {
-	// Funding is setup, not measurement: /account/credit has no SDK method.
-	// It fails once the day's allowance is claimed, which a funded account
-	// does not mind; a real funding gap shows up as createOrder failing.
-	_ = c.t.Send(ctx, http.MethodPost, "/account/credit", nil, nil)
+	// Funding is setup, not measurement. It fails once the day's allowance
+	// is claimed, which a funded account does not mind; a real funding gap
+	// shows up as createOrder failing.
+	_, _ = c.Account().ClaimCredit(ctx, nil)
 	mark, err := c.FetchMarkPrice(ctx, w.market)
 	if err != nil {
 		return fmt.Errorf("mark price: %w", err)

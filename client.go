@@ -27,7 +27,8 @@ const defaultTimeout = 30 * time.Second
 // an [*APIError] carrying Retry-After.
 //
 // A client holds at most one credential, chosen at construction:
-// [WithHMACAuth], [WithSession], [WithWallet] or [WithAgent]. Whichever it is,
+// [WithHMACAuth], [WithSession], [WithWallet], [WithAgent], or for the operator
+// tier operations [WithAdminSecret]. Whichever it is,
 // [Client.AccountAddress] says which account the client acts for.
 //
 // # Rate limits
@@ -92,7 +93,7 @@ func NewClient(network Network, opts ...Option) (*Client, error) {
 		opt(&cfg)
 	}
 	if len(cfg.creds) > 1 {
-		return nil, errors.New("nexus: choose one credential: WithHMACAuth, WithSession, WithWallet or WithAgent")
+		return nil, errors.New("nexus: choose one credential: WithHMACAuth, WithSession, WithWallet, WithAgent or WithAdminSecret")
 	}
 	c := &Client{
 		t:       transport.New(base, cfg.httpClient, APIVersion()),

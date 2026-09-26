@@ -71,3 +71,24 @@ output-options:
     - createWsToken
     - connectWebSocket
     - connectStream
+    # Parity with the sibling SDKs (ENG-17796): account, funds, trading and
+    # the bridge reads. deposit, adjustMargin and the admin tier operations
+    # declare no schema at the pinned tag, so their types are hand-written.
+    # So is fetchPortfolioHistory's: its PortfolioWindow is both a schema and
+    # a parameter, and the generator refuses the duplicate name.
+    - credit
+    - fetchEquityHistory
+    - fetchAccountFees
+    - fetchRateLimitStatus
+    - fetchAccountState
+    - fetchAccountSummary
+    - fetchAdlHistory
+    - fetchDeposits
+    - createDeposit
+    - fetchWithdrawals
+    - claimFaucet
+    - getBridgeAssets
+    - listBridgeDeposits
+    - getBridgeDeposit
+    - previewOrder
+    - fetchClosedPositions

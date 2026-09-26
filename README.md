@@ -112,7 +112,7 @@ or your own decimal library.
   count. Check `Active` on the result, not just `Enabled`.
 - **Preview costs an order.** `POST /orders/preview` is billed as a trading
   action, so previewing before every order halves your effective placement
-  rate. The SDK does not wrap or call it.
+  rate. `Client.PreviewOrder` wraps it; nothing in the SDK calls it for you.
 
 ## Versions and pinning
 

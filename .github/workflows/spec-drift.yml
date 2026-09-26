@@ -1,0 +1,67 @@
+name: Spec drift
+
+# Verifies, against the pinned OpenAPI spec (.api-version), that every endpoint
+# the SDK targets (endpoints.txt) still exists, that the list equals what the
+# SDK's methods actually send, and that each method is named for its operation
+# (R2.25). The check is TestSpecDrift in specdrift_test.go; its spec-free half
+# also runs in every `go test`, and this job adds the half that reads the spec.
+# Same shape as the sibling SDKs' spec-drift job (ENG-7958): the spec is fetched
+# from the raw-at-tag URL, which leaves the release asset's download_count as
+# an adoption signal, and cached by the pinned version.
+#
+# Runs on every PR, deliberately: a skipped required check reports nothing and
+# is satisfied by its absence, and a path filter would have to track every file
+# the check reads (ENG-7961).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Named `spec-drift`, not `drift`, so it cannot be confused with CI's
+  # pin-vs-latest `spec-pin` job, as in nexus-exchange-rs.
+  spec-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Read pinned spec version
+        id: pin
+        run: |
+          tag="$(tr -d '[:space:]' < .api-version)"
+          # Validated before it reaches a URL or cache key.
+          if [[ ! "$tag" =~ ^v[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "::error file=.api-version::.api-version must look like vX.Y.Z (got: '$tag')"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the pinned spec
+        id: cache
+        uses: actions/cache@v6
+        with:
+          path: openapi.pinned.json
+          key: spec-${{ steps.pin.outputs.tag }}
+
+      - name: Fetch spec (cache miss only)
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          SPEC_TAG: ${{ steps.pin.outputs.tag }}
+        run: |
+          curl -fsSL \
+            "https://raw.githubusercontent.com/nexus-xyz/nexus-exchange-api/${SPEC_TAG}/openapi.json" \
+            -o openapi.pinned.json
+
+      - name: Check drift
+        env:
+          NEXUS_SPEC: openapi.pinned.json
+        # -v so the spec half shows as run, not skipped.
+        run: go test -count=1 -run '^(TestSpecDrift|TestSpecDriftCatchesDrift)$' -v .

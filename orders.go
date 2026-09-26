@@ -36,6 +36,10 @@ type (
 	OrderHistoryEntry = models.OrderHistoryEntry
 	// Fill is one execution from [Client.FetchMyTrades].
 	Fill = models.Fill
+	// PreviewResponse is [Client.PreviewOrder]'s projection of an order's
+	// margin, equity and fee impact. A rejected preview is a response with
+	// Accepted false and a RejectReason, not an error.
+	PreviewResponse = models.PreviewResponse
 
 	OrderType   = models.OrderRequestOrderType
 	OrderSide   = models.OrderRequestSide
@@ -97,14 +101,28 @@ func (p Page) query() url.Values {
 // have been accepted: read it back with FetchOpenOrders or FetchOrder before
 // resubmitting.
 //
-// POST /orders/preview is billed as a trading action: it spends the same
+// [Client.PreviewOrder] is billed as a trading action: it spends the same
 // order budget as this method, so previewing before every order halves the
-// effective placement rate, and nothing in the name suggests that. This SDK
-// has no preview method yet, and nothing in it calls that route (a test
-// keeps it that way); if you call it yourself, budget for it as an order.
+// effective placement rate. Nothing in the SDK previews on your behalf (a
+// test keeps it that way).
 func (c *Client) CreateOrder(ctx context.Context, req OrderRequest) (*OrderResponse, error) {
 	var out OrderResponse
 	if err := c.t.Send(ctx, http.MethodPost, "/orders", req, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// PreviewOrder projects the margin, equity and fee impact of req without
+// placing it (POST /orders/preview).
+//
+// It is billed as a trading action, not a read: it spends the same order
+// budget as [Client.CreateOrder], and the client paces it on that budget, so
+// previewing before every order halves the effective placement rate. Like
+// every POST it is sent once and never retried.
+func (c *Client) PreviewOrder(ctx context.Context, req OrderRequest) (*PreviewResponse, error) {
+	var out PreviewResponse
+	if err := c.t.Send(ctx, http.MethodPost, "/orders/preview", req, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
