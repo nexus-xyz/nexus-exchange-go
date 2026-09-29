@@ -136,8 +136,11 @@ like the spec repo and the TypeScript and Python SDKs.
 1. `release-please.yml` watches `main` and keeps a standing release PR open,
    built from Conventional Commit subjects (`feat:`, `fix:`, `feat!:`). It
    updates `CHANGELOG.md` and `.release-please-manifest.json`. Nothing ships
-   while it is open. If its CI shows no checks, approve the workflow run from
-   the PR (GitHub gates runs started by `github-actions[bot]`).
+   while it is open. The PR is opened with a token from the org release App,
+   so CI runs on it. If the repo lacks the `RELEASE_BOT_APP_ID` /
+   `RELEASE_BOT_PRIVATE_KEY` secrets, the workflow falls back to
+   `GITHUB_TOKEN` and the PR shows no checks at all (there is no run to
+   approve). Do not merge it in that state.
 2. Merging the release PR is the release. release-please tags the merge commit
    `vX.Y.Z` and publishes the GitHub release. For a Go module the tag is the
    release; there is no registry upload.
