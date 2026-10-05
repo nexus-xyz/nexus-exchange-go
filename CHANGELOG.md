@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/nexus-xyz/nexus-exchange-go/compare/v0.1.0...v0.1.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **models:** decode served market rows (id/base/quote) (ENG-19679) ([#20](https://github.com/nexus-xyz/nexus-exchange-go/issues/20)) ([4452590](https://github.com/nexus-xyz/nexus-exchange-go/commit/4452590f3867dee96105a3f0b11b22bbaf39c24c))
+
 ## 0.1.0 (2026-09-29)
 
 
