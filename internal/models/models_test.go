@@ -130,3 +130,34 @@ func TestBatchResultUnion(t *testing.T) {
 		t.Errorf("rs[1] = %#v, %v", bad, err)
 	}
 }
+
+// servedMarket is one /markets row verbatim as public testnet served it on
+// 2026-10-05 (SERVED_MARKET in nexus-exchange-py): CCXT's id/base/quote, not
+// the pinned spec's market_id/base_asset/quote_asset (ENG-19679).
+const servedMarket = `{"active":true,"base":"BTC","contractSize":"1","funding_rate_cap":"0.001",` +
+	`"id":"BTC-USDX-PERP","initial_margin_rate":"0.02","lifecycle":"active","lot_size":"0.001",` +
+	`"maintenance_margin_rate":"0.01","maker_rebate_bps":-2,"marginModes":{"cross":true,"isolated":true},` +
+	`"max_leverage":50,"max_open_interest":"10000","max_open_interest_notional":null,"max_order_size":"100",` +
+	`"min_order_size":"0.001","price_band_bps":500,"quote":"USDX","settle":"USDX","taker_fee_bps":5,` +
+	`"tick_size":"0.5","type":"swap"}`
+
+// TestMarketServedShape: the served names decode, the spec's names are the
+// fallback, and a row with neither id is an error rather than a nil MarketId.
+func TestMarketServedShape(t *testing.T) {
+	var ms []Market
+	if err := json.Unmarshal([]byte("["+servedMarket+"]"), &ms); err != nil {
+		t.Fatal(err)
+	}
+	m := ms[0]
+	if m.MarketId == nil || *m.MarketId != "BTC-USDX-PERP" || m.BaseAsset == nil || *m.BaseAsset != "BTC" ||
+		m.QuoteAsset == nil || *m.QuoteAsset != "USDX" || m.TickSize.String() != "0.5" ||
+		m.MinOrderSize.String() != "0.001" || *m.MaxLeverage != 50 {
+		t.Errorf("decoded %+v", m)
+	}
+
+	roundTrip[Market](t, `{"market_id":"ETH-USDX-PERP","base_asset":"ETH","quote_asset":"USDX","tick_size":"0.10"}`)
+
+	if err := json.Unmarshal([]byte(`{"base":"BTC","tick_size":"0.5"}`), &m); err == nil {
+		t.Error("a row without id or market_id decoded")
+	}
+}
