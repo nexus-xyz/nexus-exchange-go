@@ -8,7 +8,16 @@ The package documentation on
 [pkg.go.dev](https://pkg.go.dev/github.com/nexus-xyz/nexus-exchange-go) is the
 reference. This README is the short version.
 
-No release is tagged yet, so `@latest` below resolves to the tip of `main`.
+> **Status: beta.** Pre-1.0: the API may change between minor versions. Built
+> and tested against testnet; mainnet is not live yet.
+>
+> Covers **62 of the 68 operations** in the pinned spec (`.api-version`),
+> listed in [`endpoints.txt`](./endpoints.txt) and checked against the
+> spec in CI. The six it does not wrap: the three `/bridge/wallets` operations,
+> the two deprecated `/bridge/deposit-addresses` operations, and the legacy
+> `POST /ws-tokens`. Releases are tagged
+> ([releases](https://github.com/nexus-xyz/nexus-exchange-go/releases)), so
+> `@latest` below resolves to the newest one.
 
 ## Install
 
