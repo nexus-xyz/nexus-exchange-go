@@ -122,6 +122,14 @@ func (c Channel) validate() error {
 //
 // Every connection needs a fresh token from POST /ws/token (single use, 60s),
 // so each reconnect mints one with the client's credentials.
+//
+// # Silent connections
+//
+// A half-open connection delivers nothing and reports no error. The
+// Subscription pings the server every 15s and, when a pong does not arrive
+// within 15s, closes the connection: Next returns [Disconnected] whose Err is
+// [ErrConnectionStale], then reconnects and resubscribes as above. Tune or
+// disable it with [WithKeepalive].
 type Subscription struct {
 	s socket
 
@@ -232,6 +240,7 @@ func (c *Client) Subscribe(ctx context.Context, channels ...Channel) (*Subscript
 		}
 		return nil
 	}
+	w.s.pingEvery, w.s.pingWait = c.pingEvery, c.pingWait
 	if err := openSocket(ctx, &w.s); err != nil {
 		return nil, err
 	}

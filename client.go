@@ -51,6 +51,9 @@ type Client struct {
 	account func(context.Context) (string, error)
 	// clock, when set, replaces time.Now for session and agent timing.
 	clock func() time.Time
+	// pingEvery and pingWait are the [Subscription] keepalive; see
+	// [WithKeepalive]. Zero pingEvery disables it.
+	pingEvery, pingWait time.Duration
 }
 
 func (c *Client) now() time.Time {
@@ -68,6 +71,8 @@ type config struct {
 	// creds holds one entry per credential option. Each installs its signer
 	// and its answer to AccountAddress; NewClient allows at most one.
 	creds []func(*Client) error
+
+	pingEvery, pingWait time.Duration
 }
 
 // WithHTTPClient makes the client send through hc, so callers can bring their
@@ -75,6 +80,35 @@ type config struct {
 // *http.Client with a 30 second timeout.
 func WithHTTPClient(hc *http.Client) Option {
 	return func(c *config) { c.httpClient = hc }
+}
+
+// Keepalive defaults: a ping every 15s, each answered within 15s, so a silent
+// connection is declared dead at most 30s after it stopped answering. 30s is
+// the Rust SDK's proactive reconnect interval.
+const (
+	defaultPingEvery = 15 * time.Second
+	defaultPingWait  = 15 * time.Second
+)
+
+// WithKeepalive sets how a [Subscription] detects a silent connection (a
+// half-open TCP connection after a NAT timeout or a load balancer drop, which
+// looks healthy but delivers nothing). Every interval it sends a WebSocket
+// ping; if the pong does not arrive within timeout, the connection is dead:
+// Next returns [Disconnected] with [ErrConnectionStale], then reconnects and
+// resubscribes from each channel's cursor like any other drop. The default is
+// a 15s interval and a 15s timeout. An interval of zero or less disables it;
+// a timeout of zero or less means the interval.
+//
+// Pongs are read by Next, so a caller that does not call Next for longer than
+// the timeout is treated as dead too. [MarketStream] does not ping: its server
+// never reads after the subscription, so it cannot answer one.
+func WithKeepalive(interval, timeout time.Duration) Option {
+	return func(c *config) {
+		if timeout <= 0 {
+			timeout = interval
+		}
+		c.pingEvery, c.pingWait = max(interval, 0), timeout
+	}
 }
 
 // NewClient returns a client for network. It returns an error if network is
@@ -88,7 +122,11 @@ func NewClient(network Network, opts ...Option) (*Client, error) {
 	if !ok {
 		return nil, fmt.Errorf("nexus: network %v is not set; choose Mainnet, Testnet or Local explicitly", network)
 	}
-	cfg := config{httpClient: &http.Client{Timeout: defaultTimeout}}
+	cfg := config{
+		httpClient: &http.Client{Timeout: defaultTimeout},
+		pingEvery:  defaultPingEvery,
+		pingWait:   defaultPingWait,
+	}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
@@ -100,6 +138,9 @@ func NewClient(network Network, opts ...Option) (*Client, error) {
 		pub:     transport.New(base, cfg.httpClient, APIVersion()),
 		network: network,
 		account: func(context.Context) (string, error) { return "", ErrNoCredential },
+
+		pingEvery: cfg.pingEvery,
+		pingWait:  cfg.pingWait,
 	}
 	for _, install := range cfg.creds {
 		if err := install(c); err != nil {
