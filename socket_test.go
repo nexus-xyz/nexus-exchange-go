@@ -163,6 +163,99 @@ func TestSubscriptionResumesAndResyncs(t *testing.T) {
 	}
 }
 
+// TestSilentConnectionIsDeclaredDead: a server that stops answering (no
+// frames, no pongs) is declared dead by the keepalive, reported as
+// Disconnected with ErrConnectionStale, and replaced by a connection that
+// resumes from the cursor.
+func TestSilentConnectionIsDeclaredDead(t *testing.T) {
+	hang := make(chan struct{})
+	subscribes := make(chan map[string]any, 4)
+	c, _ := wsServer(t, func(n int, _ *http.Request, conn *websocket.Conn) {
+		subscribes <- readFrame(t, conn)
+		if n == 0 {
+			send(conn, `{"op":"subscribed","channel":"fills","market":null,"seq_at_join":41}`)
+			<-hang // half-open: never reads, so never pongs
+			return
+		}
+		waitClose(conn)
+	})
+	t.Cleanup(func() { close(hang) })
+	c.pingEvery, c.pingWait = 20*time.Millisecond, 50*time.Millisecond
+	sub, err := c.Subscribe(context.Background(), ChannelFills)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+	sub.s.minDelay = time.Millisecond
+
+	if ev, ok := next(t, sub).(Subscribed); !ok || ev.SeqAtJoin != 41 {
+		t.Fatalf("event = %#v, want Subscribed", ev)
+	}
+	if ev, ok := next(t, sub).(Disconnected); !ok || !errors.Is(ev.Err, ErrConnectionStale) {
+		t.Fatalf("event = %#v, want Disconnected{ErrConnectionStale}", ev)
+	}
+	if ev := next(t, sub); ev != (Reconnected{}) {
+		t.Fatalf("event = %#v, want Reconnected", ev)
+	}
+	<-subscribes
+	if f := <-subscribes; f["channel"] != "fills" || f["since"] != float64(41) {
+		t.Fatalf("resubscribe = %v, want fills since 41", f)
+	}
+}
+
+// TestHealthyConnectionStays: a server that answers pings is not declared
+// dead, however many keepalive rounds pass.
+func TestHealthyConnectionStays(t *testing.T) {
+	c, _ := wsServer(t, func(_ int, _ *http.Request, conn *websocket.Conn) {
+		readFrame(t, conn)
+		closed := make(chan struct{})
+		go func() { waitClose(conn); close(closed) }() // reading is what answers pings
+		for i := range 30 {
+			send(conn, fmt.Sprintf(`{"op":"event","channel":"fills","market":null,"seq":%d,"payload":{}}`, i+1))
+			time.Sleep(10 * time.Millisecond)
+		}
+		<-closed
+	})
+	c.pingEvery, c.pingWait = 20*time.Millisecond, 50*time.Millisecond
+	sub, err := c.Subscribe(context.Background(), ChannelFills)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+	for i := range 30 {
+		if ev, ok := next(t, sub).(ChannelEvent); !ok || ev.Seq != uint64(i+1) {
+			t.Fatalf("event %d = %#v, want ChannelEvent", i, ev)
+		}
+	}
+}
+
+// TestKeepaliveDisabled: with the keepalive off nothing pings, so a silent
+// server is not declared dead.
+func TestKeepaliveDisabled(t *testing.T) {
+	if c, _ := NewClient(Testnet, WithKeepalive(0, time.Second)); c.pingEvery != 0 {
+		t.Fatalf("WithKeepalive(0) left pingEvery = %v", c.pingEvery)
+	}
+	hang := make(chan struct{})
+	c, _ := wsServer(t, func(_ int, _ *http.Request, conn *websocket.Conn) {
+		readFrame(t, conn)
+		<-hang
+	})
+	t.Cleanup(func() { close(hang) })
+	sub, err := c.Subscribe(context.Background(), ChannelFills)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Close()
+	if sub.s.alive != nil {
+		t.Fatal("keepalive started while disabled")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	if ev, err := sub.Next(ctx); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("Next = %#v, %v; want the deadline, not a disconnect", ev, err)
+	}
+}
+
 // TestOutOfSyncWithoutMarket: the server names no market when a connection
 // falls behind its broadcast, so every market of the channel resyncs.
 func TestOutOfSyncWithoutMarket(t *testing.T) {

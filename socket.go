@@ -29,6 +29,11 @@ var (
 	ErrTooManyConnections = errors.New("nexus: this process already holds 5 open WebSocket streams; Close one first")
 	// ErrStreamClosed is returned by Next once the stream is closed.
 	ErrStreamClosed = errors.New("nexus: stream closed")
+	// ErrConnectionStale is the Err of a [Disconnected] when the keepalive
+	// declared the connection dead: a ping went unanswered past its timeout
+	// (see [WithKeepalive]). Anything shown since may be stale; the next Next
+	// reconnects and resubscribes.
+	ErrConnectionStale = errors.New("nexus: connection went silent: ping unanswered")
 )
 
 // Event is one item from [MarketStream.Next] or [Subscription.Next]. The set
@@ -71,12 +76,19 @@ type socket struct {
 
 	// Backoff bounds. Fields so tests can shrink them.
 	minDelay, maxDelay time.Duration
+	// Keepalive: ping every pingEvery, dead if no pong within pingWait. Zero
+	// pingEvery disables it. Set before openSocket.
+	pingEvery, pingWait time.Duration
 
 	mu     sync.Mutex
 	conn   *websocket.Conn
 	closed bool
-	done   chan struct{}
-	free   sync.Once
+	// alive ends with the current conn; its cause is ErrConnectionStale when
+	// the keepalive killed it. Nil when the keepalive is off.
+	alive     context.Context
+	stopAlive context.CancelCauseFunc
+	done      chan struct{}
+	free      sync.Once
 
 	// Read goroutine only.
 	delay     time.Duration
@@ -119,7 +131,50 @@ func (s *socket) connect(ctx context.Context) error {
 		return err
 	}
 	s.conn, s.opened, s.delivered = conn, time.Now(), false
+	if s.pingEvery > 0 {
+		s.alive, s.stopAlive = context.WithCancelCause(context.Background())
+		go keepalive(s.alive, s.stopAlive, conn, s.pingEvery, s.pingWait)
+	}
 	return nil
+}
+
+// keepalive pings conn every interval until alive ends. An unanswered ping
+// ends alive with ErrConnectionStale and closes conn, which fails the read
+// blocked in Next.
+func keepalive(alive context.Context, stop context.CancelCauseFunc, conn *websocket.Conn, interval, timeout time.Duration) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-t.C:
+		case <-alive.Done():
+			return
+		}
+		ctx, cancel := context.WithTimeout(alive, timeout)
+		err := conn.Ping(ctx)
+		timedOut := errors.Is(ctx.Err(), context.DeadlineExceeded)
+		cancel()
+		if err == nil {
+			continue
+		}
+		if timedOut {
+			stop(ErrConnectionStale)
+			conn.CloseNow()
+		}
+		return
+	}
+}
+
+// endAlive stops the keepalive of the current conn and reports whether it was
+// what killed it. Called with mu held.
+func (s *socket) endAlive() (stale bool) {
+	if s.stopAlive == nil {
+		return false
+	}
+	s.stopAlive(nil)
+	stale = errors.Is(context.Cause(s.alive), ErrConnectionStale)
+	s.alive, s.stopAlive = nil, nil
+	return stale
 }
 
 // read returns the next data frame, or a lifecycle event, or a terminal
@@ -154,6 +209,9 @@ func (s *socket) read(ctx context.Context) ([]byte, Event, error) {
 	s.mu.Lock()
 	s.conn = nil
 	closed = s.closed
+	if s.endAlive() {
+		err = ErrConnectionStale
+	}
 	s.mu.Unlock()
 	conn.CloseNow()
 	if s.delivered || time.Since(s.opened) >= healthyAfter {
@@ -194,6 +252,7 @@ func (s *socket) close() error {
 	close(s.done)
 	conn := s.conn
 	s.conn = nil
+	s.endAlive()
 	s.mu.Unlock()
 	s.release()
 	if conn != nil {
