@@ -96,6 +96,9 @@ client does float arithmetic on it; converting to `float64` on the way in
 reintroduces the rounding the contract was shaped to avoid. Build values with
 `nexus.ParseDecimal("1.50")`, and do arithmetic with `Decimal.Rat` (`math/big`)
 or your own decimal library.
+To snap a computed price or size onto a market's tick or lot, which the
+exchange requires, use `nexus.RoundPrice` (a Buy rounds down, a Sell up) and
+`nexus.RoundSize` (toward zero).
 
 ## Behaviour a bot should know
 
