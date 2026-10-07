@@ -6,6 +6,7 @@ on:
   pull_request:
   # Re-check an arbitrary ref by hand. Nothing here reads pull-request context,
   # so every job behaves the same under all three triggers. Keep it that way.
+  # (testnet-smoke keys on the ref, not the trigger: see its comment.)
   workflow_dispatch:
 
 permissions:
@@ -84,8 +85,10 @@ jobs:
 
   # Read-only authenticated round trip against testnet (play funds): balance,
   # positions, open orders, history, fills, cancel-on-disconnect status. It
-  # places nothing. Without the key secrets (not yet added, and never available
-  # to a fork PR) it skips and passes, so it cannot red an unrelated PR.
+  # places nothing. Without the key secrets it fails on the default branch, so
+  # missing credentials cannot pass as green there (ENG-20354). Off it (a PR,
+  # whose fork or Dependabot run never sees secrets, or a dispatch on another
+  # branch) it skips and passes, so it cannot red an unrelated PR.
   testnet-smoke:
     runs-on: ubuntu-latest
     steps:
@@ -96,8 +99,13 @@ jobs:
       - env:
           NEXUS_TESTNET_KEY_ID: ${{ secrets.NEXUS_TESTNET_KEY_ID }}
           NEXUS_TESTNET_KEY_SECRET: ${{ secrets.NEXUS_TESTNET_KEY_SECRET }}
+          REQUIRE_CREDENTIAL: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && '1' || '' }}
         run: |
           if [ -z "$NEXUS_TESTNET_KEY_ID" ] || [ -z "$NEXUS_TESTNET_KEY_SECRET" ]; then
+            if [ "$REQUIRE_CREDENTIAL" = "1" ]; then
+              echo "::error::Testnet smoke needs NEXUS_TESTNET_KEY_ID / NEXUS_TESTNET_KEY_SECRET on the default branch."
+              exit 1
+            fi
             echo "::notice::Testnet smoke skipped: NEXUS_TESTNET_KEY_ID / NEXUS_TESTNET_KEY_SECRET are not set."
             exit 0
           fi
