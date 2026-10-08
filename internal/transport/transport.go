@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math/rand/v2"
 	"net/http"
 	"net/url"
@@ -152,6 +153,16 @@ func (t *Transport) Send(ctx context.Context, method, path string, body, out any
 	return t.do(ctx, method, path, raw, out)
 }
 
+// requestHeaders is the context key WithHeaders stores headers under.
+type requestHeaders struct{}
+
+// WithHeaders returns ctx carrying h, which do adds to the request it sends.
+// It is for an operation authorised by headers the caller signs itself (the
+// wallet-signed revoke), sent through a Transport with no Signer.
+func WithHeaders(ctx context.Context, h http.Header) context.Context {
+	return context.WithValue(ctx, requestHeaders{}, h)
+}
+
 func (t *Transport) do(ctx context.Context, method, path string, body []byte, out any) error {
 	class, weight := costOf(method, path, body)
 	if b := t.limits.of(class); b != nil {
@@ -172,6 +183,9 @@ func (t *Transport) do(ctx context.Context, method, path string, body []byte, ou
 	req.Header.Set("X-Nexus-Api-Version", t.apiVersion)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	if h, ok := ctx.Value(requestHeaders{}).(http.Header); ok {
+		maps.Copy(req.Header, h)
 	}
 	if t.Signer != nil {
 		// Sign what goes on the wire, minus the base prefix the edge strips.

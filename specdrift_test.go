@@ -385,7 +385,9 @@ func driftCalls(t *testing.T) map[string]func(context.Context, *Client) error {
 			_, err := c.RegisterAgent(ctx, key(), key(), RegisterAgentOptions{})
 			return err
 		},
-		"Client.RevokeAgent": func(ctx context.Context, c *Client) error { return c.RevokeAgent(ctx, "0xabc") },
+		"Client.RevokeAgent": func(ctx context.Context, c *Client) error {
+			return c.RevokeAgent(ctx, key(), "0x00000000000000000000000000000000000000ab")
+		},
 		"Client.FetchBridgeAssets": func(ctx context.Context, c *Client) error {
 			_, err := c.FetchBridgeAssets(ctx)
 			return err

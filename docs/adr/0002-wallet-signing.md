@@ -9,7 +9,9 @@
 Wallet sign-in, agent registration and agent request signing need four
 primitives: Keccak-256, secp256k1 recoverable ECDSA (RFC 6979, low-S, v in
 {27, 28}), the EIP-191 `personal_sign` digest, and the EIP-712 digest of
-`RegisterAgent{address agent, uint64 expiresAt, uint64 nonce}`.
+`RegisterAgent{address agent, uint64 expiresAt, uint64 nonce}`. Agent
+revocation (ENG-20579, after this decision) signs one more struct under the
+same domain, `RevokeAgentKey{address account, address agent, uint64 nonce}`.
 
 Most callers of this SDK read market data or trade with an HMAC key and need
 none of it. The credential options live on the root `Client`, so whatever the
@@ -75,6 +77,8 @@ everything is in `internal/`.
   nexus-exchange-ts pin in turn;
 - the salted-domain `RegisterAgent` digest that the server pins in
   `agent_store::tests::eip712_register_agent_digest_pinned` (alloy);
+- the `RevokeAgentKey` digest from the spec's `walletSignature` test vector,
+  which the accounts service pins as `PINNED_REVOKE`;
 - the per-network salts published in `x-nexus-networks`;
 - the three `agentAuth` vectors from the spec's `x-nexus-test-vectors`.
 

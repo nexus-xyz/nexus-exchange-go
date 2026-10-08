@@ -84,6 +84,20 @@ func TestRegisterAgentVectors(t *testing.T) {
 	}
 }
 
+// The spec's walletSignature test vector, which the accounts service pins as
+// PINNED_REVOKE (agent_management_auth.rs, digests_are_pinned).
+func TestRevokeAgentKeyVector(t *testing.T) {
+	account, _ := ParseAddress("0x1111111111111111111111111111111111111111")
+	agent, _ := ParseAddress("0xabababababababababababababababababababab")
+	d, err := RevokeAgentKeyDigest(20056, NetworkSalt("testnet"), account, agent, 1_790_000_000_000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := hex.EncodeToString(d); got != "73669adde69e6f7cd9f9ecc0825887403ee05d5fc6322d462e91c42920192bcb" {
+		t.Fatalf("digest = %s", got)
+	}
+}
+
 // The salts published in the spec's x-nexus-networks signing_domain.
 func TestNetworkSalt(t *testing.T) {
 	for network, want := range map[string]string{

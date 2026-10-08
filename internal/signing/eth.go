@@ -85,7 +85,7 @@ func ParseAddress(s string) ([20]byte, error) {
 	return a, nil
 }
 
-// NetworkSalt is the RegisterAgent domain salt for a network: keccak256 of
+// NetworkSalt is the agent-management domain salt for a network: keccak256 of
 // its lower-case wire name ("testnet", "mainnet", "local"), as the server
 // computes it (ENG-11924).
 func NetworkSalt(network string) []byte { return Keccak256([]byte(network)) }
@@ -96,6 +96,36 @@ func NetworkSalt(network string) []byte { return Keccak256([]byte(network)) }
 // shape the server used before ENG-11924 and the one the other SDKs' pinned
 // signatures were made under.
 func RegisterAgentDigest(chainID uint64, salt []byte, agent [20]byte, expiresAt, nonce uint64) ([]byte, error) {
+	return agentDigest(chainID, salt, "RegisterAgent", []apitypes.Type{
+		{Name: "agent", Type: "address"},
+		{Name: "expiresAt", Type: "uint64"},
+		{Name: "nonce", Type: "uint64"},
+	}, apitypes.TypedDataMessage{
+		"agent":     common.Address(agent).Hex(),
+		"expiresAt": strconv.FormatUint(expiresAt, 10),
+		"nonce":     strconv.FormatUint(nonce, 10),
+	})
+}
+
+// RevokeAgentKeyDigest is the EIP-712 digest of RevokeAgentKey{account,
+// agent, nonce}, the owner wallet's authorisation of DELETE
+// /agents/{address}, under the same domain as [RegisterAgentDigest].
+func RevokeAgentKeyDigest(chainID uint64, salt []byte, account, agent [20]byte, nonce uint64) ([]byte, error) {
+	return agentDigest(chainID, salt, "RevokeAgentKey", []apitypes.Type{
+		{Name: "account", Type: "address"},
+		{Name: "agent", Type: "address"},
+		{Name: "nonce", Type: "uint64"},
+	}, apitypes.TypedDataMessage{
+		"account": common.Address(account).Hex(),
+		"agent":   common.Address(agent).Hex(),
+		"nonce":   strconv.FormatUint(nonce, 10),
+	})
+}
+
+// agentDigest is the EIP-712 digest of message, a primaryType struct of
+// fields, under the agent-management domain {name: "Nexus Exchange",
+// version: "1", chainId, salt}. A nil salt leaves the field out.
+func agentDigest(chainID uint64, salt []byte, primaryType string, fields []apitypes.Type, message apitypes.TypedDataMessage) ([]byte, error) {
 	domainType := []apitypes.Type{
 		{Name: "name", Type: "string"},
 		{Name: "version", Type: "string"},
@@ -111,21 +141,10 @@ func RegisterAgentDigest(chainID uint64, salt []byte, agent [20]byte, expiresAt,
 		domain.Salt = hexutil.Encode(salt)
 	}
 	d, _, err := apitypes.TypedDataAndHash(apitypes.TypedData{
-		Types: apitypes.Types{
-			"EIP712Domain": domainType,
-			"RegisterAgent": {
-				{Name: "agent", Type: "address"},
-				{Name: "expiresAt", Type: "uint64"},
-				{Name: "nonce", Type: "uint64"},
-			},
-		},
-		PrimaryType: "RegisterAgent",
+		Types:       apitypes.Types{"EIP712Domain": domainType, primaryType: fields},
+		PrimaryType: primaryType,
 		Domain:      domain,
-		Message: apitypes.TypedDataMessage{
-			"agent":     common.Address(agent).Hex(),
-			"expiresAt": strconv.FormatUint(expiresAt, 10),
-			"nonce":     strconv.FormatUint(nonce, 10),
-		},
+		Message:     message,
 	})
 	return d, err
 }
