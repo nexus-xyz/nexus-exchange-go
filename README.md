@@ -86,7 +86,10 @@ A client holds at most one credential.
 - **Agent keys.** The wallet registers an agent key (EIP-712), and
   `nexus.WithAgent(agent)` trades as the wallet's account. An
   agent can never withdraw (R2.18): the server refuses it, and the SDK refuses
-  it locally first with `ErrAgentCannotWithdraw`.
+  it locally first with `ErrAgentCannotWithdraw`. The wallet revokes an agent
+  with `client.RevokeAgent(ctx, wallet, agentAddress)`, also by signing
+  (EIP-712). The server accepts only that signature there, so no API key or
+  session is needed.
 
 Keys, secrets and sessions cannot be printed: every `fmt` verb and JSON
 encoding shows a placeholder or the address.

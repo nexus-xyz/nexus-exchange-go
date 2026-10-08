@@ -67,7 +67,9 @@
 //     keys with [Client.CreateAPIKey].
 //   - [WithAgent]: an agent key the wallet registered with
 //     [Client.RegisterAgent] (EIP-712). It trades for the wallet's account and
-//     can never withdraw ([ErrAgentCannotWithdraw], R2.18).
+//     can never withdraw ([ErrAgentCannotWithdraw], R2.18). The wallet revokes
+//     it with [Client.RevokeAgent], also by signing (EIP-712), from a client
+//     with any credential or none.
 //
 // An API key does not carry its owner, so for [WithHMACAuth] the first
 // AccountAddress call asks the server, through GET /account/deposit-target.

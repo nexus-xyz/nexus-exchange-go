@@ -7,17 +7,21 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/nexus-xyz/nexus-exchange-go/internal/models"
 	"github.com/nexus-xyz/nexus-exchange-go/internal/signing"
+	"github.com/nexus-xyz/nexus-exchange-go/internal/transport"
 )
 
-// registerChainID is the RegisterAgent domain chainId. The server verifies
-// against 20056 (0x4E58, "NX") when the request names no chain, which this
-// SDK never does. It is a domain separator only, not a chain anything runs
-// on; the network is bound by the domain salt instead (ENG-11924).
+// registerChainID is the agent-management domain chainId (RegisterAgent,
+// RevokeAgentKey). The server verifies against 20056 (0x4E58, "NX") when the
+// request names no chain; a registration never names one, and a revocation
+// names this one in x-wallet-chain-id. It is a domain separator only, not a
+// chain anything runs on; the network is bound by the domain salt instead
+// (ENG-11924).
 const registerChainID = 20056
 
 // defaultAgentTTL is used when RegisterAgentOptions.ExpiresAt is zero. The
@@ -146,8 +150,38 @@ func (c *Client) FetchAgents(ctx context.Context) ([]AgentInfo, error) {
 }
 
 // RevokeAgent revokes an agent at once (DELETE /agents/{address}); requests
-// it signed are refused from then on. Like [Client.FetchAgents] it needs the API
-// key or wallet session, not an agent.
-func (c *Client) RevokeAgent(ctx context.Context, address string) error {
-	return c.t.Send(ctx, http.MethodDelete, "/agents/"+url.PathEscape(address), nil, nil)
+// it signed are refused from then on. wallet, the owner the agent was
+// registered to, signs an EIP-712 RevokeAgentKey{account, agent, nonce} under
+// the same network-salted domain as [Client.RegisterAgent]. That signature is
+// the request's only credential: the server accepts no API key, session or
+// agent here, so c may have none, or only an agent.
+//
+// The nonce is the current Unix time in milliseconds. The server accepts it
+// from 5 minutes behind its clock to 60 seconds ahead, and only once: it must
+// be greater than the last nonce wallet used to rename or revoke an agent, so
+// a second revocation by the same wallet in the same millisecond is refused.
+//
+// The address cannot be registered again until its original expiry passes;
+// register a new agent key instead.
+func (c *Client) RevokeAgent(ctx context.Context, wallet *PrivateKey, address string) error {
+	if wallet == nil {
+		return errors.New("nexus: RevokeAgent needs the wallet key the agent was registered to")
+	}
+	agent, err := signing.ParseAddress(address)
+	if err != nil {
+		return err
+	}
+	account, _ := signing.ParseAddress(wallet.Address()) // derived, so always valid
+	nonce := uint64(c.now().UnixMilli())
+	digest, err := signing.RevokeAgentKeyDigest(registerChainID, signing.NetworkSalt(c.network.String()),
+		account, agent, nonce)
+	if err != nil {
+		return fmt.Errorf("nexus: RevokeAgent typed data: %w", err)
+	}
+	h := http.Header{}
+	h.Set("X-Wallet-Account", wallet.Address())
+	h.Set("X-Wallet-Nonce", strconv.FormatUint(nonce, 10))
+	h.Set("X-Wallet-Signature", "0x"+hex.EncodeToString(signing.SignHash(wallet.key(), digest)))
+	h.Set("X-Wallet-Chain-Id", strconv.Itoa(registerChainID))
+	return c.pub.Send(transport.WithHeaders(ctx, h), http.MethodDelete, "/agents/"+url.PathEscape(address), nil, nil)
 }

@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -263,6 +264,72 @@ func TestAgentTradesButCannotWithdraw(t *testing.T) {
 	}
 	if v.count() != sent {
 		t.Fatal("a refused withdrawal was sent")
+	}
+}
+
+// RevokeAgent is wallet-signed (ENG-20579): the DELETE carries exactly the
+// four x-wallet-* headers and no other credential, even from a client that
+// holds an API key, and the signature recovers to the wallet.
+func TestRevokeAgentWalletSigned(t *testing.T) {
+	ctx := context.Background()
+	reqs := make(chan *http.Request, 4)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqs <- r.Clone(context.Background())
+	}))
+	t.Cleanup(srv.Close)
+	old := restBases[Local]
+	restBases[Local] = srv.URL
+	t.Cleanup(func() { restBases[Local] = old })
+	secret, _ := NewAPISecret(strings.Repeat("ab", 32))
+	c, err := NewClient(Local, WithHTTPClient(srv.Client()), WithHMACAuth("nx_test", secret))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.clock = func() time.Time { return time.UnixMilli(1_790_000_000_000) }
+	wallet := testKey(t)
+	const agent = "0xabababababababababababababababababababab"
+
+	if err := c.RevokeAgent(ctx, nil, agent); err == nil {
+		t.Error("nil wallet accepted")
+	}
+	if err := c.RevokeAgent(ctx, wallet, "0xabc"); err == nil {
+		t.Error("malformed address accepted")
+	}
+	if len(reqs) != 0 {
+		t.Fatal("a refused revocation was sent")
+	}
+
+	if err := c.RevokeAgent(ctx, wallet, agent); err != nil {
+		t.Fatal(err)
+	}
+	r := <-reqs
+	if r.Method != http.MethodDelete || r.URL.Path != "/agents/"+agent {
+		t.Errorf("sent %s %s", r.Method, r.URL.Path)
+	}
+	var creds []string
+	for k := range r.Header {
+		if k == "Authorization" || (strings.HasPrefix(k, "X-") && k != "X-Nexus-Api-Version") {
+			creds = append(creds, k)
+		}
+	}
+	slices.Sort(creds)
+	if want := []string{"X-Wallet-Account", "X-Wallet-Chain-Id", "X-Wallet-Nonce", "X-Wallet-Signature"}; !slices.Equal(creds, want) {
+		t.Errorf("credential headers %q, want exactly %q", creds, want)
+	}
+	for k, want := range map[string]string{
+		"X-Wallet-Account":  wallet.Address(),
+		"X-Wallet-Nonce":    "1790000000000",
+		"X-Wallet-Chain-Id": "20056",
+	} {
+		if got := r.Header.Get(k); got != want {
+			t.Errorf("%s = %q, want %q", k, got, want)
+		}
+	}
+	account, _ := signing.ParseAddress(wallet.Address())
+	agentAddr, _ := signing.ParseAddress(agent)
+	d, _ := signing.RevokeAgentKeyDigest(20056, signing.NetworkSalt("local"), account, agentAddr, 1_790_000_000_000)
+	if addr, err := recoverHex(d, r.Header.Get("X-Wallet-Signature")); err != nil || addr != wallet.Address() {
+		t.Errorf("signature recovers to %s, %v; want %s", addr, err, wallet.Address())
 	}
 }
 

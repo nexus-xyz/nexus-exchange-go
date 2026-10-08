@@ -210,7 +210,7 @@ var unmeasured = map[string]string{
 	"Client.FetchAPIKeys":        "session auth (bearerAuth), which an API key cannot drive; TestTestnetLogin does",
 	"Client.DeleteAPIKey":        "session auth (bearerAuth), which an API key cannot drive; TestTestnetLogin does",
 	"Client.RegisterAgent":       "wallet-signed registration; TestTestnetLogin drives it",
-	"Client.RevokeAgent":         "needs an agent the run registered; TestTestnetLogin drives it",
+	"Client.RevokeAgent":         "wallet-signed revocation of an agent the run registered; TestTestnetLogin drives it",
 	"Client.FetchBridgeAssets":   "the pinned spec declares it only on the /api/v1 dual mount, which the spec join skips",
 	"Client.FetchBridgeDeposits": "the pinned spec declares it only on the /api/v1 dual mount, which the spec join skips",
 	"Client.FetchBridgeDeposit":  "the pinned spec declares it only on the /api/v1 dual mount, which the spec join skips",

@@ -11,7 +11,8 @@ import (
 // TestTestnetLogin runs the wallet postures end to end against testnet with
 // a throwaway wallet, so it needs no funds and no secret: sign-in, a session
 // read, an API key minted by the session, agent registration, an agent read,
-// and the local R2.18 refusal. It cleans up the agent and the key.
+// and the local R2.18 refusal. It cleans up the key, and revokes the agent
+// with a wallet signature from the keyless client.
 //
 // It writes to testnet (a key and an agent under a fresh wallet), so it runs
 // only when asked:
@@ -68,7 +69,7 @@ func TestTestnetLogin(t *testing.T) {
 		t.Fatalf("RegisterAgent: %v", err)
 	}
 	defer func() {
-		if err := hc.RevokeAgent(context.Background(), agent.Address()); err != nil {
+		if err := pub.RevokeAgent(context.Background(), wallet, agent.Address()); err != nil {
 			t.Errorf("RevokeAgent: %v", err)
 		}
 	}()
