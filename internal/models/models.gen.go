@@ -591,30 +591,6 @@ func (e FetchOHLCVParamsTimeframe) Valid() bool {
 	}
 }
 
-// AccountFees The authenticated account's effective fee schedule, mirroring Hyperliquid `userFees`. Reports what the venue charges today: there are no per-account fee tiers or discounts yet (fee model still a draft), so `tier` is `base` and `discounts` is empty. The rate is the forward-looking schedule rate scoped by `schedule`, not a realized per-fill average.
-type AccountFees struct {
-	// Discounts Active fee discounts applied to the account. Currently always empty — no discount program exists yet.
-	Discounts []FeeDiscount `json:"discounts"`
-
-	// MakerFeeBps Effective maker fee in basis points. Negative means the maker is *paid* a rebate — e.g. -2 is a 0.02% rebate.
-	MakerFeeBps int `json:"maker_fee_bps"`
-
-	// Schedule Scope of the reported rate. Currently always `standard`. The venue charges a per-market schedule (standard crypto, mid-cap crypto, FX, commodities/indices all differ, and the split varies by deploy config), but this endpoint takes no market parameter, so it reports the standard crypto-group schedule and marks it here. Treat the rate as scoped by this value, not a venue-wide guarantee; per-market effective rates are a planned follow-up. Treat as an open string — new scopes may appear.
-	Schedule string `json:"schedule"`
-
-	// TakerFeeBps Effective taker fee in basis points — e.g. 5 is a 0.05% fee.
-	TakerFeeBps int `json:"taker_fee_bps"`
-
-	// Tier Fee tier for the account. Currently always `base`: there are no per-account fee tiers yet (distinct from rate-limit tiers). New values may appear when the fee model lands, so treat this as an open string.
-	Tier string `json:"tier"`
-
-	// Volume30d Rolling 30-day traded notional for the account, as a decimal string. Best-effort — see `volume_30d_estimated`.
-	Volume30d Decimal `json:"volume_30d"`
-
-	// Volume30dEstimated `true` when `volume_30d` may undercount: the source fill buffer was at capacity, so some older in-window fills may have been evicted. `false` when the full 30-day window is covered.
-	Volume30dEstimated bool `json:"volume_30d_estimated"`
-}
-
 // AccountFunding A funding payment for the account.
 type AccountFunding struct {
 	// Amount Signed funding amount.

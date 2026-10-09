@@ -161,3 +161,39 @@ func TestMarketServedShape(t *testing.T) {
 		t.Error("a row without id or market_id decoded")
 	}
 }
+
+// TestAccountFeesFractionalRates: AccountFees is hand-written (account_fees.go)
+// so the rates decode to 0.1 bps while the pinned spec still types them
+// integer (ENG-21111). A whole rate stays an integer and a fractional one keeps
+// its digits, both ways.
+func TestAccountFeesFractionalRates(t *testing.T) {
+	for _, in := range []string{
+		`{"discounts":[],"maker_fee_bps":-2,"schedule":"standard","taker_fee_bps":5,"tier":"base","volume_30d":"1","volume_30d_estimated":false}`,
+		`{"discounts":[],"maker_fee_bps":-0.4,"schedule":"standard","taker_fee_bps":2.8,"tier":"base","volume_30d":"1","volume_30d_estimated":false}`,
+		`{"discounts":[],"maker_fee_bps":0.4,"schedule":"standard","taker_fee_bps":2.8,"tier":"base","volume_30d":"1","volume_30d_estimated":false}`,
+	} {
+		roundTrip[AccountFees](t, in)
+	}
+	f := roundTrip[AccountFees](t, `{"discounts":[],"maker_fee_bps":-0.4,"schedule":"standard","taker_fee_bps":2.8,"tier":"base","volume_30d":"1","volume_30d_estimated":false}`)
+	if f.MakerFeeBps != "-0.4" || f.TakerFeeBps != "2.8" {
+		t.Errorf("fees = %q / %q", f.MakerFeeBps, f.TakerFeeBps)
+	}
+}
+
+// TestMarketFractionalFeeRates: Market does not declare taker_fee_bps or
+// maker_rebate_bps (the pinned spec does not), so a row carrying a rate to 0.1
+// bps must still decode (ENG-21111).
+func TestMarketFractionalFeeRates(t *testing.T) {
+	row := strings.NewReplacer(`"maker_rebate_bps":-2`, `"maker_rebate_bps":-0.4`,
+		`"taker_fee_bps":5`, `"taker_fee_bps":2.8`).Replace(servedMarket)
+	if row == servedMarket {
+		t.Fatal("fixture did not change")
+	}
+	var m Market
+	if err := json.Unmarshal([]byte(row), &m); err != nil {
+		t.Fatal(err)
+	}
+	if m.MarketId == nil || *m.MarketId != "BTC-USDX-PERP" {
+		t.Errorf("decoded %+v", m)
+	}
+}

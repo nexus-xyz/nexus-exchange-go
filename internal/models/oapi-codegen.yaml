@@ -12,8 +12,12 @@ output-options:
   # Nullable fields (`["T","null"]`, or oneOf [T, null]) become
   # nullable.Nullable[T], which keeps an explicit null apart from an absent key.
   nullable-type: true
-  # Hand-written in decimal.go. References to the schema resolve to that type.
-  exclude-schemas: [Decimal]
+  # Hand-written, so references to these schemas resolve to our types.
+  # Decimal: decimal.go. AccountFees: account_fees.go, because the server
+  # sends its fee rates to 0.1 bps while the pinned spec still types them
+  # integer (ENG-21111). Drop AccountFees here, and delete its file, once the
+  # pinned spec types those rates number.
+  exclude-schemas: [Decimal, AccountFees]
   type-mapping:
     # CCXT-shaped fields the spec types as JSON numbers. json.Number keeps the
     # served digits (it is a string), so no float64 enters a wire type.
