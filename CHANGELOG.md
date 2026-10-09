@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/nexus-xyz/nexus-exchange-go/compare/v0.1.1...v0.2.0) (2026-10-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* **agents:** Client.RevokeAgent(ctx, address) is now Client.RevokeAgent(ctx, wallet, address). The server accepts only the owner wallet's signature on DELETE /agents/{address}; the API key or session call the old method made is refused with 401 WALLET_SIGNATURE_REQUIRED.
+
+### Features
+
+* **agents:** revoke agents with the wallet signature (ENG-20579) ([#27](https://github.com/nexus-xyz/nexus-exchange-go/issues/27)) ([ef347e2](https://github.com/nexus-xyz/nexus-exchange-go/commit/ef347e2eb28cfe3e453ddf9f5a0e2791568d3599))
+* **market:** RoundPrice and RoundSize tick/lot helpers, matching the Rust SDK (ENG-20360) ([#23](https://github.com/nexus-xyz/nexus-exchange-go/issues/23)) ([edcacd0](https://github.com/nexus-xyz/nexus-exchange-go/commit/edcacd03d0e36f0d2a767f3d1e777e4179ccd5d5))
+* **ws:** detect a silent Subscription connection with pings (ENG-20363) ([#24](https://github.com/nexus-xyz/nexus-exchange-go/issues/24)) ([1c8005f](https://github.com/nexus-xyz/nexus-exchange-go/commit/1c8005f94d8da5b35c48ac497bc8080dc6c44b98))
+
 ## [0.1.1](https://github.com/nexus-xyz/nexus-exchange-go/compare/v0.1.0...v0.1.1) (2026-10-05)
 
 
