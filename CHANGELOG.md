@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/nexus-xyz/nexus-exchange-go/compare/v0.2.0...v0.3.0) (2026-10-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **account:** AccountFees.MakerFeeBps and AccountFees.TakerFeeBps are now json.Number, not int, and can be fractional ("2.8"). Migration: read the served digits with .String(), use nexus.ParseDecimal(f.TakerFeeBps.String()) for exact arithmetic, or .Float64() for display only. .Int64() fails on a fractional rate.
+
+### Bug Fixes
+
+* **account:** decode fractional fee rates (ENG-21111) ([912520c](https://github.com/nexus-xyz/nexus-exchange-go/commit/912520cd1ffd11fc78ffe4f021f31d457e0d3329))
+
 ## [0.2.0](https://github.com/nexus-xyz/nexus-exchange-go/compare/v0.1.1...v0.2.0) (2026-10-08)
 
 
