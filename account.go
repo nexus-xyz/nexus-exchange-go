@@ -24,7 +24,10 @@ type (
 	// Equity is a JSON number in the pinned spec, kept as its served digits.
 	EquityPoint = models.EquityPoint
 	// AccountFees is the account's effective fee schedule, from
-	// [Account.FetchTradingFees].
+	// [Account.FetchTradingFees]. MakerFeeBps and TakerFeeBps are JSON
+	// numbers kept as their served digits, to 0.1 bps ("2.8", "-0.4"); read
+	// them with [ParseDecimal] for exact arithmetic. A negative maker rate is a
+	// rebate paid to the maker, a positive one a fee the maker pays.
 	AccountFees = models.AccountFees
 	// RateLimitStatus is the account's rate-limit tier and remaining budget,
 	// from [Account.FetchRateLimitStatus].

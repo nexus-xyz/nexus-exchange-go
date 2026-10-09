@@ -56,7 +56,7 @@ func TestParityOperationsOnTheWire(t *testing.T) {
 		{"fetchTradingFees", `{"tier":"base","schedule":"s","maker_fee_bps":2,"taker_fee_bps":5,"discounts":[]}`, "GET", "/account/fees", "",
 			func(c *Client) error {
 				f, err := c.Account().FetchTradingFees(ctx)
-				if err == nil && f.TakerFeeBps != 5 {
+				if err == nil && f.TakerFeeBps != "5" {
 					t.Errorf("fees = %+v", f)
 				}
 				return err
