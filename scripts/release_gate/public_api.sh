@@ -28,6 +28,13 @@ esac
 
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
+
+# First, before the lister builds anything, so a forgotten snapshot fails in seconds.
+if [ "$mode" = "check" ] && [ ! -f "$SNAPSHOT" ]; then
+  echo "::error title=prepublish-surface::$SNAPSHOT is missing. Run scripts/release_gate/public_api.sh --write and commit it."
+  exit 1
+fi
+
 lister="$root/scripts/release_gate/surface"
 
 work="$(mktemp -d)"
@@ -46,11 +53,6 @@ if [ "$mode" = "write" ]; then
   cp "$work/public-api.txt" "$SNAPSHOT"
   echo "wrote $SNAPSHOT ($(wc -l < "$SNAPSHOT") items)"
   exit 0
-fi
-
-if [ ! -f "$SNAPSHOT" ]; then
-  echo "::error title=prepublish-surface::$SNAPSHOT is missing. Run scripts/release_gate/public_api.sh --write and commit it."
-  exit 1
 fi
 
 if diff -u --label "$SNAPSHOT (committed)" --label "$SNAPSHOT (this tree)" \
