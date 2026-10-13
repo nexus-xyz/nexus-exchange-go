@@ -39,6 +39,25 @@ packages. That is the point: generated models change whenever the spec does,
 and keeping them internal keeps that churn out of the semver contract. Expose
 what users need from the root package with a deliberate type or alias.
 
+## Public API snapshot
+
+`public-api.txt` lists the module's public API, one line per exported item:
+funcs, methods, types with their fields, consts with their values. Aliases into
+`internal/models` are followed, so a model's fields and an enum's wire values
+are in it too. If you change the public API, regenerate it and commit it in the
+same PR:
+
+```sh
+scripts/release_gate/public_api.sh --write
+```
+
+`prepublish-surface` fails on any difference, so a removal shows up in the diff
+a reviewer reads (ENG-18798). A `-` line is a breaking change: give the PR a `!`
+title, because the next release's `prepublish-verdict` fails a patch bump for
+it. The lister is `scripts/release_gate/surface`, a nested module (as is the
+smoke's consumer, `scripts/release_gate/smoke`), so neither is in the SDK's
+module zip or in `go list ./...`.
+
 ## Regenerating the models
 
 ```sh
@@ -144,6 +163,31 @@ like the spec repo and the TypeScript and Python SDKs.
 2. Merging the release PR is the release. release-please tags the merge commit
    `vX.Y.Z` and publishes the GitHub release. For a Go module the tag is the
    release; there is no registry upload.
+
+**Before merging, the pre-publish checks have to be green on the release PR**
+(`.github/workflows/pre-publish.yml`, ENG-18798):
+
+- `prepublish-surface`: the module's public API equals `public-api.txt`.
+- `prepublish-smoke`: a consumer built from a clean copy of the committed tree
+  (`git archive HEAD`) lists markets on the public testnet. _Testnet
+  unreachable_ fails under its own name. It is not a pass, so re-run the job
+  once testnet answers. On every other PR it builds the consumer and checks the
+  smoke's failed and unreachable outcomes locally, without a testnet read.
+- `prepublish-verdict`: the proposed version fits the spec change since the
+  latest GitHub release, graded by the monorepo's classifier
+  (`scripts/release_gate/VENDORED.md`). Below 1.0 a breaking change needs a
+  minor bump. _Could not classify_ fails and needs a person. And the public API
+  change since then: a line of `public-api.txt` at the released tag that this
+  branch no longer has is a removed or reshaped export, and needs the same
+  bump. Releases before ENG-18798 carry no `public-api.txt`, so that part starts
+  with the first release after it.
+- `spec-drift`, and CI's jobs, as on every PR.
+
+To run them locally: `scripts/release_gate/public_api.sh`,
+`scripts/release_gate/smoke.sh` (it builds from your last commit), and
+`python3 scripts/release_gate/release_verdict.py --registry github --package nexus-xyz/nexus-exchange-go --manifest .release-please-manifest.json --report`
+(it needs [oasdiff](https://github.com/oasdiff/oasdiff) 1.30.0 on `PATH` or in
+`OASDIFF` when the spec pin moved).
 
 Pre-1.0 policy: `feat!` bumps the minor version and `feat`/`fix` bump the
 patch, so the computed version stays below 1.0.0. The first release should be
