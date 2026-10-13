@@ -3,8 +3,8 @@
 # from a clean copy of the committed tree, and runs one unauthenticated read against the public
 # testnet with it. No keys, no writes.
 #
-#   scripts/release_gate/smoke.sh               build, check the outcomes, read
-#   scripts/release_gate/smoke.sh --build-only  build and check the outcomes, no testnet read (PRs that are not a release)
+#   scripts/release_gate/smoke.sh               build, check exits 2 and 1, read
+#   scripts/release_gate/smoke.sh --build-only  build, check exits 2 and 1, no testnet read (PRs that are not a release)
 #
 # A Go release has no package to unpack: the tag is the release, and the proxy serves the tagged
 # tree. So the copy is `git archive HEAD`, the committed tree and nothing else: no untracked or
@@ -15,12 +15,16 @@
 # on 1 and on 2, under different names. Unreachable is not a pass, and it is not the SDK's fault:
 # re-run the job once testnet answers.
 #
-# The outcomes are exercised, not only asserted. In both modes, right after the build and before any
-# testnet read, the built smoke runs twice with NEXUS_SMOKE_BASE_URL overridden:
+# Exits 2 and 1 are exercised on every run, not only asserted. In both modes, right after the build
+# and before any testnet read, the built smoke runs three times with NEXUS_SMOKE_BASE_URL overridden:
 #   http://127.0.0.1:1, where nothing listens, must exit 2 (unreachable, never a pass);
+#   `stub_server.py 503`, a server in an outage, must exit 2 (unreachable, never failed or passed);
 #   stub_server.py, which answers every request with an empty list, must exit 1 (failed).
-# A wrong code fails this script as `prepublish-smoke (outcomes)`. Those runs call the binary
-# directly, so they raise none of the annotations below, which their codes would otherwise trigger.
+# Exit 0 is exercised only by the real read, which runs on the release PR and on a change to this
+# gate. Each probe runs under `timeout 60`; a wrong code, or a probe that hits the timeout, fails
+# this script as `prepublish-smoke (outcomes)`, naming the case. The probes call the binary directly
+# and keep both its stdout and stderr, so they raise none of the annotations below; each prints one
+# plain log line instead: the case, the exit code and the first line of the smoke's output.
 set -euo pipefail
 
 mode="read"
@@ -62,42 +66,63 @@ if ! (cd "$consumer" && go vet ./... && go build -o "$work/smoke" .); then
 fi
 echo "built a consumer of the SDK at ${commit} (git archive HEAD)"
 
-# The outcome checks. Each runs the built smoke directly and compares its exit code.
+# The outcome checks. Each runs the built smoke directly, both output streams captured, under a
+# hard timeout, and compares its exit code.
 expect() {
-  local name="$1" base="$2" want="$3" line got
+  local name="$1" base="$2" want="$3" out got first
   set +e
-  line="$(NEXUS_SMOKE_BASE_URL="$base" "$work/smoke")"
+  out="$(NEXUS_SMOKE_BASE_URL="$base" timeout 60 "$work/smoke" 2>&1)"
   got=$?
   set -e
-  if [ "$got" != "$want" ]; then
-    echo "::error title=prepublish-smoke (outcomes)::${name}: the smoke exited ${got}, not ${want}, so its outcomes cannot be trusted. ${line}"
-    summary "❌ OUTCOME CHECK FAILED" "${name}: exited ${got}, not ${want}. ${line}"
+  first="${out%%$'\n'*}"
+  if [ "$got" = 124 ]; then
+    echo "::error title=prepublish-smoke (outcomes)::${name}: the smoke gave no outcome within 60 s, so its outcomes cannot be trusted."
+    summary "❌ OUTCOME CHECK FAILED" "${name}: no outcome within 60 s."
     exit 1
   fi
-  echo "outcome check, ${name}: exited ${got} as it must (${line})"
+  if [ "$got" != "$want" ]; then
+    echo "::error title=prepublish-smoke (outcomes)::${name}: the smoke exited ${got}, not ${want}, so its outcomes cannot be trusted. First line: ${first}"
+    summary "❌ OUTCOME CHECK FAILED" "${name}: exited ${got}, not ${want}. ${first}"
+    exit 1
+  fi
+  echo "outcome check, ${name}: exit ${got} as it must; first line: ${first}"
+}
+
+# Starts stub_server.py with its arguments in the background and sets stub_pid and port.
+start_stub() {
+  python3 -I "$work/sdk/scripts/release_gate/stub_server.py" "$@" > "$work/stub.port" &
+  stub_pid=$!
+  port=""
+  for _ in $(seq 50); do
+    port="$(head -n 1 "$work/stub.port")"
+    [ -n "$port" ] && break
+    sleep 0.1
+  done
+  if [ -z "$port" ]; then
+    echo "::error title=prepublish-smoke (outcomes)::stub_server.py $* printed no port, so that outcome was not checked."
+    exit 1
+  fi
+}
+
+stop_stub() {
+  kill "$stub_pid" 2>/dev/null || true
+  wait "$stub_pid" 2>/dev/null || true
+  stub_pid=""
 }
 
 expect "nothing listening" "http://127.0.0.1:1" 2
 
-python3 -I "$work/sdk/scripts/release_gate/stub_server.py" > "$work/stub.port" &
-stub_pid=$!
-port=""
-for _ in $(seq 50); do
-  port="$(head -n 1 "$work/stub.port")"
-  [ -n "$port" ] && break
-  sleep 0.1
-done
-if [ -z "$port" ]; then
-  echo "::error title=prepublish-smoke (outcomes)::stub_server.py printed no port, so the failed outcome was not checked."
-  exit 1
-fi
+start_stub 503
+expect "a server answering 503" "http://127.0.0.1:${port}" 2
+stop_stub
+
+start_stub
 expect "a server with no markets" "http://127.0.0.1:${port}" 1
-kill "$stub_pid" 2>/dev/null || true
-stub_pid=""
+stop_stub
 
 if [ "$mode" = "build" ]; then
-  echo "::notice title=prepublish-smoke (read not attempted)::Not a release PR: a clean consumer of the committed tree built, and its failed and unreachable outcomes were checked against local stand-ins. No testnet read was made. The read runs on the release PR."
-  summary "build only" "Not a release PR: a clean consumer of \`${commit}\` built and its failed and unreachable outcomes were checked locally. No testnet read was attempted, so this is not a smoke pass."
+  echo "::notice title=prepublish-smoke (read not attempted)::Not a release PR: a clean consumer of the committed tree built, and its exits 2 (unreachable) and 1 (failed) were checked against local stand-ins. Exit 0 was not exercised: no testnet read was made. The read runs on the release PR."
+  summary "build only" "Not a release PR: a clean consumer of \`${commit}\` built and its exits 2 and 1 were checked against local stand-ins. No testnet read was attempted, so exit 0 was not exercised and this is not a smoke pass."
   exit 0
 fi
 

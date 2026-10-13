@@ -171,8 +171,10 @@ like the spec repo and the TypeScript and Python SDKs.
 - `prepublish-smoke`: a consumer built from a clean copy of the committed tree
   (`git archive HEAD`) lists markets on the public testnet. _Testnet
   unreachable_ fails under its own name. It is not a pass, so re-run the job
-  once testnet answers. On every other PR it builds the consumer and checks the
-  smoke's failed and unreachable outcomes locally, without a testnet read.
+  once testnet answers. On every PR it first checks the smoke's exits 2
+  (unreachable: a closed port, a 503) and 1 (failed: no markets) against local
+  stand-ins. Exit 0 comes only from the testnet read, which runs on the release
+  PR and on a change to the gate.
 - `prepublish-verdict`: the proposed version fits the spec change since the
   latest GitHub release, graded by the monorepo's classifier
   (`scripts/release_gate/VENDORED.md`). Below 1.0 a breaking change needs a

@@ -18,17 +18,18 @@ name: Pre-publish
 # RUNS ON EVERY PR, with no `paths:` filter, for spec-drift.yml's reason: a required check that is
 # skipped reports nothing, and the PR waits on it forever. What changes on a release PR (head branch
 # `release-please--branches--main--components--nexus-exchange-go`), or on a PR that edits this gate:
-#   * smoke makes the testnet read. Elsewhere it builds the consumer and checks the smoke's failed and
-#     unreachable outcomes against local stand-ins only, and says so.
+#   * smoke makes the testnet read, the only run that exercises exit 0 (passed). Elsewhere it builds
+#     the consumer and checks exits 2 and 1 against local stand-ins only, and says so.
 #   * verdict is enforced on a release PR. Elsewhere it reports what the next release will need.
 # The surface check is enforced on every PR, because the PR that changes the API is where the
 # snapshot has to move. A release PR moves only CHANGELOG.md and .release-please-manifest.json, so
 # it passes unchanged.
 #
-# smoke.sh exercises the smoke's outcomes on every run, before any testnet read: the built smoke
-# must exit 2 (unreachable) against a port where nothing listens and 1 (failed) against
-# stub_server.py, which answers with no markets. A wrong code fails the job as
-# `prepublish-smoke (outcomes)`.
+# smoke.sh exercises exits 2 and 1 on every PR, before any testnet read: the built smoke must exit
+# 2 (unreachable) against a port where nothing listens and against `stub_server.py 503` (an
+# outage), and 1 (failed) against stub_server.py answering with no markets. Each probe has a 60 s
+# timeout. A wrong code, or a timeout, fails the job as `prepublish-smoke (outcomes)`. Exit 0 is
+# exercised only by the real read above.
 #
 # The release PR's runs start on their own only when release-please opens it with the release App's
 # token (release-please.yml). Without the RELEASE_BOT_* secrets it falls back to GITHUB_TOKEN, whose
@@ -103,7 +104,7 @@ jobs:
           else
             echo "mode=other" >> "$GITHUB_OUTPUT"
           fi
-      - name: Build a clean consumer, check the outcomes, read testnet
+      - name: Build a clean consumer, check exits 2 and 1, read testnet
         env:
           MODE: ${{ steps.mode.outputs.mode }}
         run: |
