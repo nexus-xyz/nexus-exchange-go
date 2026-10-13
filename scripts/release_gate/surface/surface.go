@@ -69,12 +69,14 @@ func Surface(dir string) ([]string, error) {
 }
 
 // load lists the module's packages. -find: no dependency is resolved, so nothing is downloaded.
-// GOWORK=off: a go.work above the tree must not add or replace modules.
+// GOWORK=off: a go.work above the tree must not add or replace modules. The platform is pinned, so
+// the build constraints that pick the files are linux/amd64's without cgo wherever this runs, and a
+// --write on a Mac matches CI.
 func load(dir string) (*module, error) {
 	run := func(args ...string) ([]byte, error) {
 		cmd := exec.Command("go", args...)
 		cmd.Dir = dir
-		cmd.Env = append(os.Environ(), "GOWORK=off")
+		cmd.Env = append(os.Environ(), "GOWORK=off", "GOOS=linux", "GOARCH=amd64", "CGO_ENABLED=0")
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		out, err := cmd.Output()

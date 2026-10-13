@@ -34,7 +34,8 @@
 // What it does not see: what an embedded type promotes; struct tags, so a JSON wire name (the
 // spec-drift and conformance checks own those); unexported fields, so adding one to a struct whose
 // fields were all exported, which breaks unkeyed literals; and types reachable only through a
-// field or a result. Doc comments are not part of the listing, so rewording one moves nothing.
+// field or a result; and build-constrained files are read for linux/amd64 only (without cgo). Doc
+// comments are not part of the listing, so rewording one moves nothing.
 package main
 
 import (
