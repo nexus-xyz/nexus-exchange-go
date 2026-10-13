@@ -21,8 +21,10 @@
 #   `stub_server.py 503`, a server in an outage, must exit 2 (unreachable, never failed or passed);
 #   stub_server.py, which answers every request with an empty list, must exit 1 (failed).
 # Exit 0 is exercised only by the real read, which runs on the release PR and on a change to this
-# gate. Each probe runs under `timeout 60`; a wrong code, or a probe that hits the timeout, fails
-# this script as `prepublish-smoke (outcomes)`, naming the case. The probes call the binary directly
+# gate. Each probe runs under `timeout 180` (above the smoke's own 2-minute deadline, which bounds
+# the SDK's retries); a wrong code, or a probe that hits the timeout, fails this script as
+# `prepublish-smoke (outcomes)`, naming the case. Without GNU `timeout` or `gtimeout` (macOS has
+# neither by default) the probes run with no time limit, and say so. The probes call the binary directly
 # and keep both its stdout and stderr, so they raise none of the annotations below; each prints one
 # plain log line instead: the case, the exit code and the first line of the smoke's output.
 set -euo pipefail
@@ -66,18 +68,28 @@ if ! (cd "$consumer" && go vet ./... && go build -o "$work/smoke" .); then
 fi
 echo "built a consumer of the SDK at ${commit} (git archive HEAD)"
 
+# The probes' time limit: GNU `timeout` (CI), else Homebrew's `gtimeout`, else none.
+limit=()
+if command -v timeout > /dev/null; then
+  limit=(timeout 180)
+elif command -v gtimeout > /dev/null; then
+  limit=(gtimeout 180)
+else
+  echo "note: neither timeout nor gtimeout is installed, so the outcome checks run with no time limit"
+fi
+
 # The outcome checks. Each runs the built smoke directly, both output streams captured, under a
-# hard timeout, and compares its exit code.
+# hard timeout when there is one, and compares its exit code.
 expect() {
   local name="$1" base="$2" want="$3" out got first
   set +e
-  out="$(NEXUS_SMOKE_BASE_URL="$base" timeout 60 "$work/smoke" 2>&1)"
+  out="$(NEXUS_SMOKE_BASE_URL="$base" ${limit[@]+"${limit[@]}"} "$work/smoke" 2>&1)"
   got=$?
   set -e
   first="${out%%$'\n'*}"
-  if [ "$got" = 124 ]; then
-    echo "::error title=prepublish-smoke (outcomes)::${name}: the smoke gave no outcome within 60 s, so its outcomes cannot be trusted."
-    summary "❌ OUTCOME CHECK FAILED" "${name}: no outcome within 60 s."
+  if [ "$got" = 124 ] && [ "${#limit[@]}" -gt 0 ]; then
+    echo "::error title=prepublish-smoke (outcomes)::${name}: the smoke gave no outcome within 180 s, so its outcomes cannot be trusted."
+    summary "❌ OUTCOME CHECK FAILED" "${name}: no outcome within 180 s."
     exit 1
   fi
   if [ "$got" != "$want" ]; then
@@ -90,6 +102,8 @@ expect() {
 
 # Starts stub_server.py with its arguments in the background and sets stub_pid and port.
 start_stub() {
+  # Created first, so the read below never meets a missing file while the stub is starting.
+  : > "$work/stub.port"
   python3 -I "$work/sdk/scripts/release_gate/stub_server.py" "$@" > "$work/stub.port" &
   stub_pid=$!
   port=""

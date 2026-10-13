@@ -27,7 +27,7 @@ name: Pre-publish
 #
 # smoke.sh exercises exits 2 and 1 on every PR, before any testnet read: the built smoke must exit
 # 2 (unreachable) against a port where nothing listens and against `stub_server.py 503` (an
-# outage), and 1 (failed) against stub_server.py answering with no markets. Each probe has a 60 s
+# outage), and 1 (failed) against stub_server.py answering with no markets. Each probe has a 180 s
 # timeout. A wrong code, or a timeout, fails the job as `prepublish-smoke (outcomes)`. Exit 0 is
 # exercised only by the real read above.
 #
@@ -91,7 +91,7 @@ jobs:
           # event's base.sha also listed whatever landed on the base since, which flipped unrelated PRs
           # into the testnet read.
           if ! git rev-parse --verify --quiet 'HEAD^2' > /dev/null; then
-            echo "::error title=prepublish-smoke::HEAD is not a merge commit, so the PR's own changes can't be listed"
+            echo "::error title=prepublish-smoke::HEAD is not a merge commit, or the checkout is shallow (this job needs fetch-depth: 0), so the PR's own changes can't be listed"
             exit 1
           fi
           # Into a file, not a pipe: under pipefail a failed `git diff`, or one cut short by
