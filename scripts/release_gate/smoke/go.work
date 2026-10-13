@@ -1,0 +1,8 @@
+// The SDK this smoke imports is the repo root, not a published version (see go.mod). smoke.sh
+// builds from `git archive HEAD`, where ../../.. is that clean copy.
+go 1.26.0
+
+use (
+	.
+	../../..
+)
