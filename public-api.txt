@@ -1,0 +1,679 @@
+const nexus.Buy models.OrderRequestSide = "Buy"
+const nexus.FOK models.OrderRequestTimeInForce = "FOK"
+const nexus.GTC models.OrderRequestTimeInForce = "GTC"
+const nexus.IOC models.OrderRequestTimeInForce = "IOC"
+const nexus.Local Network = iota + 1 (iota = 2)
+const nexus.Mainnet Network = iota + 1 (iota = 0)
+const nexus.MarginAdd MarginDirection = "add"
+const nexus.MarginRemove MarginDirection = "remove"
+const nexus.OrderTypeLimit models.OrderRequestOrderType = "Limit"
+const nexus.OrderTypeMarket models.OrderRequestOrderType = "Market"
+const nexus.OrderTypeStopLimit models.OrderRequestOrderType = "StopLimit"
+const nexus.OrderTypeStopMarket models.OrderRequestOrderType = "StopMarket"
+const nexus.OrderTypeTakeProfitLimit models.OrderRequestOrderType = "TakeProfitLimit"
+const nexus.OrderTypeTakeProfitMarket models.OrderRequestOrderType = "TakeProfitMarket"
+const nexus.OrderTypeTrailingLimit models.OrderRequestOrderType = "TrailingLimit"
+const nexus.OrderTypeTrailingStop models.OrderRequestOrderType = "TrailingStop"
+const nexus.PostOnly models.OrderRequestTimeInForce = "PostOnly"
+const nexus.STPCancelNewest models.OrderRequestStp = "CancelNewest"
+const nexus.STPCancelOldest models.OrderRequestStp = "CancelOldest"
+const nexus.STPDecrementAndCancel models.OrderRequestStp = "DecrementAndCancel"
+const nexus.Sell models.OrderRequestSide = "Sell"
+const nexus.Testnet Network = iota + 1 (iota = 1)
+func (*nexus.APIError) Error() string
+func (*nexus.APIError) Is(error) bool
+func (*nexus.Agent) Address() string
+func (*nexus.Agent) ExpiresAt() time.Time
+func (*nexus.Agent) Owner() string
+func (*nexus.Candle) UnmarshalJSON([]byte) error
+func (*nexus.Client) Account() Account
+func (*nexus.Client) AccountAddress(context.Context) (string, error)
+func (*nexus.Client) CancelAllOrders(context.Context, string) ([]Order, error)
+func (*nexus.Client) CancelOrder(context.Context, string, string) (*Order, error)
+func (*nexus.Client) ClaimFaucet(context.Context) (*FaucetResponse, error)
+func (*nexus.Client) CreateAPIKey(context.Context) (*APIKey, error)
+func (*nexus.Client) CreateDeposit(context.Context, DepositRequest) (*DepositResponse, error)
+func (*nexus.Client) CreateOrder(context.Context, OrderRequest) (*OrderResponse, error)
+func (*nexus.Client) CreateOrders(context.Context, []OrderRequest) ([]OrderResult, error)
+func (*nexus.Client) DeleteAPIKey(context.Context, string) error
+func (*nexus.Client) DeleteTier(context.Context, string) error
+func (*nexus.Client) EditOrder(context.Context, string, string, AmendOrderRequest) (*Order, error)
+func (*nexus.Client) FetchAPIKeys(context.Context) ([]APIKeyInfo, error)
+func (*nexus.Client) FetchAdlEvents(context.Context, string, int) ([]AdlEventRecord, error)
+func (*nexus.Client) FetchAdlHistory(context.Context, string, int) ([]AdlEventRecord, error)
+func (*nexus.Client) FetchAgents(context.Context) ([]AgentInfo, error)
+func (*nexus.Client) FetchBridgeAssets(context.Context) (*BridgeAssetsResponse, error)
+func (*nexus.Client) FetchBridgeDeposit(context.Context, string) (*BridgeDeposit, error)
+func (*nexus.Client) FetchBridgeDeposits(context.Context, BridgeDepositsParams) ([]BridgeDeposit, error)
+func (*nexus.Client) FetchDeposits(context.Context, int) ([]FundsEntry, error)
+func (*nexus.Client) FetchFundingHistory(context.Context, int) ([]AccountFunding, error)
+func (*nexus.Client) FetchFundingRateHistory(context.Context, string, int) ([]FundingSample, error)
+func (*nexus.Client) FetchFundingSamples(context.Context, string, int) ([]FundingPremiumSample, error)
+func (*nexus.Client) FetchMarkPrice(context.Context, string) (*MarkPrice, error)
+func (*nexus.Client) FetchMarketRiskParams(context.Context, string) (*MarketRiskParams, error)
+func (*nexus.Client) FetchMarketStatus(context.Context, string) (*MarketStatus, error)
+func (*nexus.Client) FetchMarkets(context.Context) ([]Market, error)
+func (*nexus.Client) FetchMarketsSummary(context.Context) ([]MarketSummary, error)
+func (*nexus.Client) FetchMyTrades(context.Context, Page) ([]Fill, string, error)
+func (*nexus.Client) FetchOHLCV(context.Context, string, CandlesParams) ([]Candle, error)
+func (*nexus.Client) FetchOHLCVHistory(context.Context, string, CandlesParams) iter.Seq2[Candle, error]
+func (*nexus.Client) FetchOpenOrders(context.Context) ([]Order, error)
+func (*nexus.Client) FetchOrder(context.Context, string, string) (*Order, error)
+func (*nexus.Client) FetchOrderBook(context.Context, string) (*OrderBook, error)
+func (*nexus.Client) FetchOrders(context.Context, Page) ([]OrderHistoryEntry, string, error)
+func (*nexus.Client) FetchPositions(context.Context) ([]Position, error)
+func (*nexus.Client) FetchPositionsHistory(context.Context, Page) ([]ClosedPosition, string, error)
+func (*nexus.Client) FetchStats(context.Context) (*StatsSnapshot, error)
+func (*nexus.Client) FetchStatsHistory(context.Context) ([]ThroughputSample, error)
+func (*nexus.Client) FetchStatus(context.Context) (*ServiceHealth, error)
+func (*nexus.Client) FetchTicker(context.Context, string) (*Ticker, error)
+func (*nexus.Client) FetchTickers(context.Context) (map[string]Ticker, error)
+func (*nexus.Client) FetchTiers(context.Context) ([]TierEntry, error)
+func (*nexus.Client) FetchTrades(context.Context, string, int) iter.Seq2[Trade, error]
+func (*nexus.Client) FetchWithdrawals(context.Context, int) ([]Withdrawal, error)
+func (*nexus.Client) Login(context.Context, *PrivateKey) (*Session, error)
+func (*nexus.Client) MarketStream(context.Context, ...StreamChannel) (*MarketStream, error)
+func (*nexus.Client) PreviewOrder(context.Context, OrderRequest) (*PreviewResponse, error)
+func (*nexus.Client) RegisterAgent(context.Context, *PrivateKey, *PrivateKey, RegisterAgentOptions) (*Agent, error)
+func (*nexus.Client) RevokeAgent(context.Context, *PrivateKey, string) error
+func (*nexus.Client) SetTier(context.Context, string, string) (*TierEntry, error)
+func (*nexus.Client) Subscribe(context.Context, ...Channel) (*Subscription, error)
+func (*nexus.Decimal) UnmarshalJSON([]byte) error
+func (*nexus.DepositResponse) Set(string, interface{})
+func (*nexus.DepositResponse) UnmarshalJSON([]byte) error
+func (*nexus.Market) UnmarshalJSON([]byte) error
+func (*nexus.MarketStream) Close() error
+func (*nexus.MarketStream) Next(context.Context) (Event, error)
+func (*nexus.OrderResult) FromOrderResultErr(models.OrderResultErr) error
+func (*nexus.OrderResult) FromOrderResultOk(models.OrderResultOk) error
+func (*nexus.OrderResult) MergeOrderResultErr(models.OrderResultErr) error
+func (*nexus.OrderResult) MergeOrderResultOk(models.OrderResultOk) error
+func (*nexus.OrderResult) UnmarshalJSON([]byte) error
+func (*nexus.PrivateKey) Address() string
+func (*nexus.PrivateKey) Format(fmt.State, rune)
+func (*nexus.PrivateKey) GoString() string
+func (*nexus.PrivateKey) Hex() string
+func (*nexus.PrivateKey) MarshalJSON() ([]byte, error)
+func (*nexus.PrivateKey) String() string
+func (*nexus.Session) Address() string
+func (*nexus.Session) ExpiresAt() time.Time
+func (*nexus.Session) Format(fmt.State, rune)
+func (*nexus.Session) GoString() string
+func (*nexus.Session) MarshalJSON() ([]byte, error)
+func (*nexus.Session) String() string
+func (*nexus.Subscription) Close() error
+func (*nexus.Subscription) Next(context.Context) (Event, error)
+func (*nexus.Subscription) Subscribe(context.Context, Channel) error
+func (*nexus.Subscription) Unsubscribe(context.Context, Channel) error
+func (*nexus.VersionError) Error() string
+func (*nexus.VersionError) Unwrap() error
+func (nexus.APISecret) Format(fmt.State, rune)
+func (nexus.APISecret) GoString() string
+func (nexus.APISecret) MarshalJSON() ([]byte, error)
+func (nexus.APISecret) String() string
+func (nexus.Account) AddMargin(context.Context, MarginRequest) (*MarginResult, error)
+func (nexus.Account) ClaimCredit(context.Context, *Decimal) (*CreditResponse, error)
+func (nexus.Account) Deposit(context.Context, Decimal) (*DepositResult, error)
+func (nexus.Account) FetchAccountState(context.Context) (*AccountState, error)
+func (nexus.Account) FetchAccountSummary(context.Context) (*AccountPortfolioSummary, error)
+func (nexus.Account) FetchBalance(context.Context) (*AccountSummary, error)
+func (nexus.Account) FetchCancelOnDisconnect(context.Context) (*CancelOnDisconnectStatus, error)
+func (nexus.Account) FetchEquityHistory(context.Context, Page) ([]EquityPoint, string, error)
+func (nexus.Account) FetchPortfolioHistory(context.Context, string, int) (*PortfolioHistory, error)
+func (nexus.Account) FetchRateLimitStatus(context.Context) (*RateLimitStatus, error)
+func (nexus.Account) FetchTradingFees(context.Context) (*AccountFees, error)
+func (nexus.Account) SetCancelOnDisconnect(context.Context, bool) (*CancelOnDisconnectStatus, error)
+func (nexus.Candle) MarshalJSON() ([]byte, error)
+func (nexus.Channel) Market() string
+func (nexus.Channel) Name() string
+func (nexus.Channel) String() string
+func (nexus.Decimal) Float64() (float64, error)
+func (nexus.Decimal) MarshalJSON() ([]byte, error)
+func (nexus.Decimal) Rat() *big.Rat
+func (nexus.Decimal) String() string
+func (nexus.DepositResponse) Get(string) (interface{}, bool)
+func (nexus.DepositResponse) MarshalJSON() ([]byte, error)
+func (nexus.Network) String() string
+func (nexus.OrderResult) AsOrderResultErr() (models.OrderResultErr, error)
+func (nexus.OrderResult) AsOrderResultOk() (models.OrderResultOk, error)
+func (nexus.OrderResult) Discriminator() (string, error)
+func (nexus.OrderResult) MarshalJSON() ([]byte, error)
+func (nexus.OrderResult) ValueByDiscriminator() (interface{}, error)
+func (nexus.OrderSide) Valid() bool
+func (nexus.OrderType) Valid() bool
+func (nexus.STP) Valid() bool
+func (nexus.StreamChannel) String() string
+func (nexus.TimeInForce) Valid() bool
+func nexus.APIVersion() string
+func nexus.ChannelBook(string) Channel
+func nexus.ChannelCandles(string) Channel
+func nexus.ChannelTrades(string) Channel
+func nexus.GeneratePrivateKey() (*PrivateKey, error)
+func nexus.NewAPISecret(string) (APISecret, error)
+func nexus.NewAgent(*PrivateKey, string) (*Agent, error)
+func nexus.NewClient(Network, ...Option) (*Client, error)
+func nexus.NewPrivateKey(string) (*PrivateKey, error)
+func nexus.ParseDecimal(string) (Decimal, error)
+func nexus.RoundPrice(Market, Decimal, OrderSide) (Decimal, error)
+func nexus.RoundSize(Market, Decimal) Decimal
+func nexus.StreamBook(string) StreamChannel
+func nexus.StreamMarketStatus(string) StreamChannel
+func nexus.StreamTrades(string) StreamChannel
+func nexus.WithAdminSecret(string) Option
+func nexus.WithAgent(*Agent) Option
+func nexus.WithHMACAuth(string, APISecret) Option
+func nexus.WithHTTPClient(*http.Client) Option
+func nexus.WithKeepalive(time.Duration, time.Duration) Option
+func nexus.WithSession(*Session) Option
+func nexus.WithWallet(*PrivateKey) Option
+type nexus.APIError = transport.APIError
+type nexus.APIError struct
+type nexus.APIError struct { Bucket string }
+type nexus.APIError struct { ClockSkew time.Duration }
+type nexus.APIError struct { Code string }
+type nexus.APIError struct { Details map[string]json.RawMessage }
+type nexus.APIError struct { Message string }
+type nexus.APIError struct { RetryAfter time.Duration }
+type nexus.APIError struct { ServerTime time.Time }
+type nexus.APIError struct { StatusCode int }
+type nexus.APIError struct { Tier string }
+type nexus.APIKey struct
+type nexus.APIKey struct { KeyID string }
+type nexus.APIKey struct { Secret APISecret }
+type nexus.APIKeyInfo struct
+type nexus.APIKeyInfo struct { KeyID string }
+type nexus.APIKeyInfo struct { Tier string }
+type nexus.APISecret struct
+type nexus.Account struct
+type nexus.AccountFees = models.AccountFees
+type nexus.AccountFees struct
+type nexus.AccountFees struct { Discounts []models.FeeDiscount }
+type nexus.AccountFees struct { MakerFeeBps json.Number }
+type nexus.AccountFees struct { Schedule string }
+type nexus.AccountFees struct { TakerFeeBps json.Number }
+type nexus.AccountFees struct { Tier string }
+type nexus.AccountFees struct { Volume30d models.Decimal }
+type nexus.AccountFees struct { Volume30dEstimated bool }
+type nexus.AccountFunding = models.AccountFunding
+type nexus.AccountFunding struct
+type nexus.AccountFunding struct { Amount *models.Decimal }
+type nexus.AccountFunding struct { Direction *models.AccountFundingDirection }
+type nexus.AccountFunding struct { FundingRate *models.Decimal }
+type nexus.AccountFunding struct { MarketId *string }
+type nexus.AccountFunding struct { PositionSize *models.Decimal }
+type nexus.AccountFunding struct { Timestamp *models.TimestampMs }
+type nexus.AccountPortfolioSummary = models.AccountPortfolioSummary
+type nexus.AccountPortfolioSummary struct
+type nexus.AccountPortfolioSummary struct { AvailableMargin *models.Decimal }
+type nexus.AccountPortfolioSummary struct { Collateral *models.Decimal }
+type nexus.AccountPortfolioSummary struct { EarlyAccessAllowed *bool }
+type nexus.AccountPortfolioSummary struct { MarginUsed *models.Decimal }
+type nexus.AccountPortfolioSummary struct { OpenOrdersCount *int }
+type nexus.AccountPortfolioSummary struct { OpenPositionsCount *int }
+type nexus.AccountPortfolioSummary struct { TotalEquity *models.Decimal }
+type nexus.AccountPortfolioSummary struct { TotalRealizedPnl24h *models.Decimal }
+type nexus.AccountPortfolioSummary struct { TotalUnrealizedPnl *models.Decimal }
+type nexus.AccountPortfolioSummary struct { TotalVolume24h *models.Decimal }
+type nexus.AccountPortfolioSummary struct { Withdrawable *models.Decimal }
+type nexus.AccountState = models.AccountState
+type nexus.AccountState struct
+type nexus.AccountState struct { Positions []models.Position }
+type nexus.AccountState struct { Summary models.AccountPortfolioSummary }
+type nexus.AccountSummary = models.AccountSummary
+type nexus.AccountSummary struct
+type nexus.AccountSummary struct { AvailableMargin *models.Decimal }
+type nexus.AccountSummary struct { Balance *models.Decimal }
+type nexus.AccountSummary struct { Collateral *models.Decimal }
+type nexus.AccountSummary struct { Equity *models.Decimal }
+type nexus.AccountSummary struct { Positions *[]models.Position }
+type nexus.AdlEventRecord = models.AdlEventRecord
+type nexus.AdlEventRecord struct
+type nexus.AdlEventRecord struct { BadDebtAbsorbedByFund *models.Decimal }
+type nexus.AdlEventRecord struct { BankruptcyPrice *models.Decimal }
+type nexus.AdlEventRecord struct { CounterpartyClosures *[]models.AdlClosureRecord }
+type nexus.AdlEventRecord struct { MarketId *string }
+type nexus.AdlEventRecord struct { Sequence *int }
+type nexus.AdlEventRecord struct { TargetAccount *string }
+type nexus.AdlEventRecord struct { Timestamp *models.TimestampMs }
+type nexus.Agent struct
+type nexus.AgentInfo = models.AgentInfo
+type nexus.AgentInfo struct
+type nexus.AgentInfo struct { Address *string }
+type nexus.AgentInfo struct { ExpiresAt *models.TimestampMs }
+type nexus.AgentInfo struct { Label nullable.Nullable[string] }
+type nexus.AgentInfo struct { RegisteredAt *models.TimestampMs }
+type nexus.AmendOrderRequest = models.AmendOrderRequest
+type nexus.AmendOrderRequest struct
+type nexus.AmendOrderRequest struct { Price *models.Decimal }
+type nexus.AmendOrderRequest struct { Size *models.Decimal }
+type nexus.BookLevel struct
+type nexus.BookLevel struct { OrderCount uint32 }
+type nexus.BookLevel struct { Price Decimal }
+type nexus.BookLevel struct { Quantity Decimal }
+type nexus.BookSnapshot struct
+type nexus.BookSnapshot struct { Asks []BookLevel }
+type nexus.BookSnapshot struct { Bids []BookLevel }
+type nexus.BookSnapshot struct { MarketID string }
+type nexus.BookSnapshot struct { ReceivedAt time.Time }
+type nexus.BookSnapshot struct { Sequence uint64 }
+type nexus.BridgeAssetsResponse = models.BridgeAssetsResponse
+type nexus.BridgeAssetsResponse struct
+type nexus.BridgeAssetsResponse struct { Chains []models.BridgeChainAssets }
+type nexus.BridgeDeposit = models.BridgeDeposit
+type nexus.BridgeDeposit struct
+type nexus.BridgeDeposit struct { AccountId string }
+type nexus.BridgeDeposit struct { Address string }
+type nexus.BridgeDeposit struct { Amount models.Decimal }
+type nexus.BridgeDeposit struct { Asset models.BridgeDepositAsset }
+type nexus.BridgeDeposit struct { Chain string }
+type nexus.BridgeDeposit struct { Confirmations nullable.Nullable[int] }
+type nexus.BridgeDeposit struct { CreatedAt models.TimestampMs }
+type nexus.BridgeDeposit struct { CreditedAt nullable.Nullable[models.TimestampMs] }
+type nexus.BridgeDeposit struct { Id string }
+type nexus.BridgeDeposit struct { RequiredConfirmations nullable.Nullable[int] }
+type nexus.BridgeDeposit struct { Status models.BridgeDepositStatus }
+type nexus.BridgeDeposit struct { TxHash nullable.Nullable[string] }
+type nexus.BridgeDeposit struct { UpdatedAt *models.TimestampMs }
+type nexus.BridgeDepositsParams struct
+type nexus.BridgeDepositsParams struct { Asset string }
+type nexus.BridgeDepositsParams struct { Chain string }
+type nexus.BridgeDepositsParams struct { Limit int }
+type nexus.BridgeDepositsParams struct { Status string }
+type nexus.CancelOnDisconnectStatus = models.CancelOnDisconnectStatus
+type nexus.CancelOnDisconnectStatus struct
+type nexus.CancelOnDisconnectStatus struct { Active bool }
+type nexus.CancelOnDisconnectStatus struct { Enabled bool }
+type nexus.CancelOnDisconnectStatus struct { GraceSecs nullable.Nullable[int] }
+type nexus.Candle struct
+type nexus.Candle struct { Close json.Number }
+type nexus.Candle struct { High json.Number }
+type nexus.Candle struct { Low json.Number }
+type nexus.Candle struct { Open json.Number }
+type nexus.Candle struct { Timestamp int64 }
+type nexus.Candle struct { Volume json.Number }
+type nexus.CandlesParams struct
+type nexus.CandlesParams struct { EndTime int64 }
+type nexus.CandlesParams struct { Limit int }
+type nexus.CandlesParams struct { StartTime int64 }
+type nexus.CandlesParams struct { Timeframe string }
+type nexus.Channel struct
+type nexus.ChannelEvent struct
+type nexus.ChannelEvent struct { Channel Channel }
+type nexus.ChannelEvent struct { EngineEnvelope *EngineEnvelope }
+type nexus.ChannelEvent struct { Payload json.RawMessage }
+type nexus.ChannelEvent struct { Seq uint64 }
+type nexus.Client struct
+type nexus.ClosedPosition = models.ClosedPosition
+type nexus.ClosedPosition struct
+type nexus.ClosedPosition struct { ClosedAtMs *models.TimestampMs }
+type nexus.ClosedPosition struct { EntryPrice *models.Decimal }
+type nexus.ClosedPosition struct { ExitPrice *models.Decimal }
+type nexus.ClosedPosition struct { MarketId *string }
+type nexus.ClosedPosition struct { RealizedPnl *models.Decimal }
+type nexus.ClosedPosition struct { Side *models.ClosedPositionSide }
+type nexus.ClosedPosition struct { Size *models.Decimal }
+type nexus.CreditResponse = models.CreditResponse
+type nexus.CreditResponse struct
+type nexus.CreditResponse struct { Amount models.Decimal }
+type nexus.CreditResponse struct { CreditedToday models.Decimal }
+type nexus.CreditResponse struct { DailyLimit models.Decimal }
+type nexus.Decimal = models.Decimal
+type nexus.Decimal struct
+type nexus.DepositRequest = models.DepositRequest
+type nexus.DepositRequest struct
+type nexus.DepositRequest struct { Amount models.Decimal }
+type nexus.DepositRequest struct { Asset *string }
+type nexus.DepositResponse = models.DepositResponse
+type nexus.DepositResponse struct
+type nexus.DepositResponse struct { AdditionalProperties map[string]interface{} }
+type nexus.DepositResponse struct { Balance *models.Decimal }
+type nexus.DepositResult struct
+type nexus.DepositResult struct { Balance Decimal }
+type nexus.Disconnected struct
+type nexus.Disconnected struct { Err error }
+type nexus.EngineEnvelope struct
+type nexus.EngineEnvelope struct { EmittedAt int64 }
+type nexus.EngineEnvelope struct { Epoch uint64 }
+type nexus.EngineEnvelope struct { Sequence uint64 }
+type nexus.EquityPoint = models.EquityPoint
+type nexus.EquityPoint struct
+type nexus.EquityPoint struct { Equity *json.Number }
+type nexus.EquityPoint struct { TimestampMs *models.TimestampMs }
+type nexus.Event interface
+type nexus.FaucetResponse = models.FaucetResponse
+type nexus.FaucetResponse struct
+type nexus.FaucetResponse struct { Amount *models.Decimal }
+type nexus.FaucetResponse struct { AvailableAtMs *models.TimestampMs }
+type nexus.Fill = models.Fill
+type nexus.Fill struct
+type nexus.Fill struct { Fee *models.Decimal }
+type nexus.Fill struct { Id *string }
+type nexus.Fill struct { IsLiquidation *bool }
+type nexus.Fill struct { MarketId *string }
+type nexus.Fill struct { OrderId *string }
+type nexus.Fill struct { Price *models.Decimal }
+type nexus.Fill struct { Side *models.FillSide }
+type nexus.Fill struct { Size *models.Decimal }
+type nexus.Fill struct { TakerOrMaker *models.FillTakerOrMaker }
+type nexus.Fill struct { Timestamp *models.TimestampMs }
+type nexus.FundingPremiumSample = models.FundingPremiumSample
+type nexus.FundingPremiumSample struct
+type nexus.FundingPremiumSample struct { PremiumIndex models.Decimal }
+type nexus.FundingPremiumSample struct { Timestamp models.TimestampMs }
+type nexus.FundingSample = models.FundingSample
+type nexus.FundingSample struct
+type nexus.FundingSample struct { FundingRate *models.Decimal }
+type nexus.FundingSample struct { MarkPrice *models.Decimal }
+type nexus.FundingSample struct { OraclePrice *models.Decimal }
+type nexus.FundingSample struct { PremiumIndex *models.Decimal }
+type nexus.FundingSample struct { Timestamp *models.TimestampMs }
+type nexus.FundsEntry = models.FundsEntry
+type nexus.FundsEntry struct
+type nexus.FundsEntry struct { Account *string }
+type nexus.FundsEntry struct { Amount *models.Decimal }
+type nexus.FundsEntry struct { Asset *string }
+type nexus.FundsEntry struct { Id *int64 }
+type nexus.FundsEntry struct { Kind *models.FundsEntryKind }
+type nexus.FundsEntry struct { Status *models.FundsEntryStatus }
+type nexus.FundsEntry struct { Timestamp *models.TimestampMs }
+type nexus.FundsEntry struct { TxHash nullable.Nullable[string] }
+type nexus.Gap struct
+type nexus.Gap struct { Missed uint64 }
+type nexus.MarginDirection string
+type nexus.MarginRequest struct
+type nexus.MarginRequest struct { Amount Decimal }
+type nexus.MarginRequest struct { Direction MarginDirection }
+type nexus.MarginRequest struct { MarketID string }
+type nexus.MarginResult struct
+type nexus.MarginResult struct { AllocatedMargin Decimal }
+type nexus.MarginResult struct { Collateral Decimal }
+type nexus.MarginResult struct { MarketID string }
+type nexus.MarkPrice struct
+type nexus.MarkPrice struct { MarkPrice Decimal }
+type nexus.MarkPrice struct { MarketID string }
+type nexus.Market = models.Market
+type nexus.Market struct
+type nexus.Market struct { BaseAsset *string }
+type nexus.Market struct { InitialMarginRate *models.Decimal }
+type nexus.Market struct { LotSize *models.Decimal }
+type nexus.Market struct { MaintenanceMarginRate *models.Decimal }
+type nexus.Market struct { MarketId *string }
+type nexus.Market struct { MaxLeverage *int }
+type nexus.Market struct { MaxOrderSize *models.Decimal }
+type nexus.Market struct { MinOrderSize *models.Decimal }
+type nexus.Market struct { QuoteAsset *string }
+type nexus.Market struct { TickSize *models.Decimal }
+type nexus.MarketHalted struct
+type nexus.MarketHalted struct { MarketID string }
+type nexus.MarketHalted struct { Reason string }
+type nexus.MarketHalted struct { Timestamp int64 }
+type nexus.MarketResumed struct
+type nexus.MarketResumed struct { MarketID string }
+type nexus.MarketResumed struct { Timestamp int64 }
+type nexus.MarketRiskParams = models.MarketRiskParams
+type nexus.MarketRiskParams struct
+type nexus.MarketRiskParams struct { InitialMarginRate *models.Decimal }
+type nexus.MarketRiskParams struct { MaintenanceMarginRate *models.Decimal }
+type nexus.MarketRiskParams struct { MarketId *string }
+type nexus.MarketRiskParams struct { MaxLeverage *int }
+type nexus.MarketStatus = models.MarketStatus
+type nexus.MarketStatus struct
+type nexus.MarketStatus struct { AdlEventCount *int }
+type nexus.MarketStatus struct { HaltReason nullable.Nullable[string] }
+type nexus.MarketStatus struct { HaltedAt nullable.Nullable[int64] }
+type nexus.MarketStatus struct { MarketId *string }
+type nexus.MarketStatus struct { Status *models.MarketStatusStatus }
+type nexus.MarketStream struct
+type nexus.MarketSummary = models.MarketSummary
+type nexus.MarketSummary struct
+type nexus.MarketSummary struct { AdlEventCount *int }
+type nexus.MarketSummary struct { HaltReason nullable.Nullable[string] }
+type nexus.MarketSummary struct { HaltedAt nullable.Nullable[int64] }
+type nexus.MarketSummary struct { LastTradePrice nullable.Nullable[json.Number] }
+type nexus.MarketSummary struct { MarketId *string }
+type nexus.MarketSummary struct { Status *models.MarketSummaryStatus }
+type nexus.MarketSummary struct { TradeCount *int }
+type nexus.MarketSummary struct { Volume24h *json.Number }
+type nexus.Network int
+type nexus.Option func(*config)
+type nexus.Order = models.Order
+type nexus.Order struct
+type nexus.Order struct { AccountId *string }
+type nexus.Order struct { CancellationReason nullable.Nullable[models.Order_CancellationReason] }
+type nexus.Order struct { CreatedAt *models.TimestampMs }
+type nexus.Order struct { FilledQty *models.Decimal }
+type nexus.Order struct { Id *string }
+type nexus.Order struct { LimitOffsetBps nullable.Nullable[int] }
+type nexus.Order struct { MarketId *string }
+type nexus.Order struct { MaxSlippageBps nullable.Nullable[int] }
+type nexus.Order struct { OrderType *string }
+type nexus.Order struct { Price *models.Decimal }
+type nexus.Order struct { Quantity *models.Decimal }
+type nexus.Order struct { Side *models.OrderSide }
+type nexus.Order struct { Status *models.OrderStatus }
+type nexus.Order struct { Stp nullable.Nullable[string] }
+type nexus.Order struct { TimeInForce *string }
+type nexus.Order struct { UpdatedAt *models.TimestampMs }
+type nexus.OrderBook = models.OrderBook
+type nexus.OrderBook struct
+type nexus.OrderBook struct { Asks *[][]interface{} }
+type nexus.OrderBook struct { Bids *[][]interface{} }
+type nexus.OrderBook struct { Datetime *string }
+type nexus.OrderBook struct { Nonce *int64 }
+type nexus.OrderBook struct { Symbol *string }
+type nexus.OrderBook struct { Timestamp *models.TimestampMs }
+type nexus.OrderHistoryEntry = models.OrderHistoryEntry
+type nexus.OrderHistoryEntry struct
+type nexus.OrderHistoryEntry struct { CancellationReason nullable.Nullable[string] }
+type nexus.OrderHistoryEntry struct { CompletedAtMs *models.TimestampMs }
+type nexus.OrderHistoryEntry struct { CreatedAtMs *models.TimestampMs }
+type nexus.OrderHistoryEntry struct { FilledQty *models.Decimal }
+type nexus.OrderHistoryEntry struct { Id *string }
+type nexus.OrderHistoryEntry struct { MarketId *string }
+type nexus.OrderHistoryEntry struct { OrderType *string }
+type nexus.OrderHistoryEntry struct { Price nullable.Nullable[models.Decimal] }
+type nexus.OrderHistoryEntry struct { Side *models.OrderHistoryEntrySide }
+type nexus.OrderHistoryEntry struct { Size *models.Decimal }
+type nexus.OrderHistoryEntry struct { Status *models.OrderHistoryEntryStatus }
+type nexus.OrderRequest = models.OrderRequest
+type nexus.OrderRequest struct
+type nexus.OrderRequest struct { LimitOffsetBps nullable.Nullable[int] }
+type nexus.OrderRequest struct { MarketId string }
+type nexus.OrderRequest struct { MaxSlippageBps nullable.Nullable[int] }
+type nexus.OrderRequest struct { OrderType models.OrderRequestOrderType }
+type nexus.OrderRequest struct { Price *models.Decimal }
+type nexus.OrderRequest struct { Quantity models.Decimal }
+type nexus.OrderRequest struct { ReduceOnly *bool }
+type nexus.OrderRequest struct { Side models.OrderRequestSide }
+type nexus.OrderRequest struct { StopPrice nullable.Nullable[models.Decimal] }
+type nexus.OrderRequest struct { Stp nullable.Nullable[models.OrderRequestStp] }
+type nexus.OrderRequest struct { TimeInForce models.OrderRequestTimeInForce }
+type nexus.OrderRequest struct { TrailingOffsetBps nullable.Nullable[int] }
+type nexus.OrderRequest struct { TriggerPrice nullable.Nullable[models.Decimal] }
+type nexus.OrderResponse = models.OrderResponse
+type nexus.OrderResponse struct
+type nexus.OrderResponse struct { Fills *[]models.Fill }
+type nexus.OrderResponse struct { Order *models.Order }
+type nexus.OrderResult = models.OrderResult
+type nexus.OrderResult struct
+type nexus.OrderResultErr = models.OrderResultErr
+type nexus.OrderResultErr struct
+type nexus.OrderResultErr struct { Error string }
+type nexus.OrderResultErr struct { Message string }
+type nexus.OrderResultErr struct { Outcome models.OrderResultErrOutcome }
+type nexus.OrderResultOk = models.OrderResultOk
+type nexus.OrderResultOk struct
+type nexus.OrderResultOk struct { Fills *[]models.Fill }
+type nexus.OrderResultOk struct { Order models.Order }
+type nexus.OrderResultOk struct { Outcome models.OrderResultOkOutcome }
+type nexus.OrderSide = models.OrderRequestSide
+type nexus.OrderSide string
+type nexus.OrderType = models.OrderRequestOrderType
+type nexus.OrderType string
+type nexus.OutOfSync struct
+type nexus.OutOfSync struct { Channel Channel }
+type nexus.OutOfSync struct { OldestSeq uint64 }
+type nexus.Page struct
+type nexus.Page struct { Cursor string }
+type nexus.Page struct { Limit int }
+type nexus.PortfolioHistory struct
+type nexus.PortfolioHistory struct { CadenceMs int64 }
+type nexus.PortfolioHistory struct { Points []PortfolioPoint }
+type nexus.PortfolioHistory struct { Window string }
+type nexus.PortfolioPoint struct
+type nexus.PortfolioPoint struct { Equity Decimal }
+type nexus.PortfolioPoint struct { Pnl Decimal }
+type nexus.PortfolioPoint struct { TimestampMs int64 }
+type nexus.PortfolioPoint struct { Volume Decimal }
+type nexus.Position = models.Position
+type nexus.Position struct
+type nexus.Position struct { EntryPrice *models.Decimal }
+type nexus.Position struct { FundingPaid *models.Decimal }
+type nexus.Position struct { Leverage nullable.Nullable[json.Number] }
+type nexus.Position struct { LeverageError nullable.Nullable[string] }
+type nexus.Position struct { LiquidationPrice *models.Decimal }
+type nexus.Position struct { MarginUsed nullable.Nullable[models.Decimal] }
+type nexus.Position struct { MarginUsedError nullable.Nullable[string] }
+type nexus.Position struct { MarketId *string }
+type nexus.Position struct { MaxLeverage nullable.Nullable[int] }
+type nexus.Position struct { MaxLeverageError nullable.Nullable[string] }
+type nexus.Position struct { NotionalValue nullable.Nullable[models.Decimal] }
+type nexus.Position struct { NotionalValueError nullable.Nullable[string] }
+type nexus.Position struct { RealizedPnl *models.Decimal }
+type nexus.Position struct { Roe nullable.Nullable[models.Decimal] }
+type nexus.Position struct { RoeError nullable.Nullable[string] }
+type nexus.Position struct { Side *models.PositionSide }
+type nexus.Position struct { Size *models.Decimal }
+type nexus.Position struct { UnrealizedPnl *models.Decimal }
+type nexus.PreviewResponse = models.PreviewResponse
+type nexus.PreviewResponse struct
+type nexus.PreviewResponse struct { Accepted *bool }
+type nexus.PreviewResponse struct { ExpectedFillVwap nullable.Nullable[models.Decimal] }
+type nexus.PreviewResponse struct { ProjectedFees *models.Decimal }
+type nexus.PreviewResponse struct { ProjectedPostTradeEquity *models.Decimal }
+type nexus.PreviewResponse struct { ProjectedPostTradeLeverage *models.Decimal }
+type nexus.PreviewResponse struct { ProjectedPostTradeLiquidationPrice nullable.Nullable[models.Decimal] }
+type nexus.PreviewResponse struct { RejectReason nullable.Nullable[string] }
+type nexus.PreviewResponse struct { RequiredInitialMargin *models.Decimal }
+type nexus.PrivateKey struct
+type nexus.RateLimitStatus = models.RateLimitStatus
+type nexus.RateLimitStatus struct
+type nexus.RateLimitStatus struct { Limit nullable.Nullable[int] }
+type nexus.RateLimitStatus struct { Remaining nullable.Nullable[int] }
+type nexus.RateLimitStatus struct { ResetAtMs nullable.Nullable[int] }
+type nexus.RateLimitStatus struct { Tier string }
+type nexus.Reconnected struct
+type nexus.RegisterAgentOptions struct
+type nexus.RegisterAgentOptions struct { ExpiresAt time.Time }
+type nexus.RegisterAgentOptions struct { Label string }
+type nexus.STP = models.OrderRequestStp
+type nexus.STP string
+type nexus.ServerError struct
+type nexus.ServerError struct { Message string }
+type nexus.ServiceHealth = models.ServiceHealth
+type nexus.ServiceHealth struct
+type nexus.ServiceHealth struct { Services *map[string]interface{} }
+type nexus.ServiceHealth struct { Status *models.ServiceHealthStatus }
+type nexus.ServiceHealth struct { TimestampMs *models.TimestampMs }
+type nexus.Session struct
+type nexus.StatsSnapshot = models.StatsSnapshot
+type nexus.StatsSnapshot struct
+type nexus.StatsSnapshot struct { Connected *bool }
+type nexus.StatsSnapshot struct { EventsPerSec *json.Number }
+type nexus.StatsSnapshot struct { EventsReceived *int64 }
+type nexus.StatsSnapshot struct { FillsTotal *int64 }
+type nexus.StatsSnapshot struct { GapCount *int64 }
+type nexus.StatsSnapshot struct { Health *string }
+type nexus.StatsSnapshot struct { HighestSequenceSeen *int64 }
+type nexus.StatsSnapshot struct { LastEventMs nullable.Nullable[models.TimestampMs] }
+type nexus.StatsSnapshot struct { LiquidationsTotal *int64 }
+type nexus.StatsSnapshot struct { UniqueTraders24h *int64 }
+type nexus.StatsSnapshot struct { UniqueTraders30d *int64 }
+type nexus.StatsSnapshot struct { UniqueTraders7d *int64 }
+type nexus.StatsSnapshot struct { UptimeSeconds *int64 }
+type nexus.StreamChannel struct
+type nexus.Subscribed struct
+type nexus.Subscribed struct { Channel Channel }
+type nexus.Subscribed struct { SeqAtJoin uint64 }
+type nexus.Subscription struct
+type nexus.ThroughputSample = models.ThroughputSample
+type nexus.ThroughputSample struct
+type nexus.ThroughputSample struct { Fills *int64 }
+type nexus.ThroughputSample struct { Timestamp *int64 }
+type nexus.Ticker = models.Ticker
+type nexus.Ticker struct
+type nexus.Ticker struct { Ask nullable.Nullable[json.Number] }
+type nexus.Ticker struct { AskVolume nullable.Nullable[json.Number] }
+type nexus.Ticker struct { BaseVolume nullable.Nullable[json.Number] }
+type nexus.Ticker struct { Bid nullable.Nullable[json.Number] }
+type nexus.Ticker struct { BidVolume nullable.Nullable[json.Number] }
+type nexus.Ticker struct { Change nullable.Nullable[json.Number] }
+type nexus.Ticker struct { Close nullable.Nullable[json.Number] }
+type nexus.Ticker struct { Datetime *string }
+type nexus.Ticker struct { High nullable.Nullable[json.Number] }
+type nexus.Ticker struct { IndexPrice nullable.Nullable[json.Number] }
+type nexus.Ticker struct { Info *map[string]interface{} }
+type nexus.Ticker struct { Last nullable.Nullable[json.Number] }
+type nexus.Ticker struct { Low nullable.Nullable[json.Number] }
+type nexus.Ticker struct { MarkPrice nullable.Nullable[json.Number] }
+type nexus.Ticker struct { Open nullable.Nullable[json.Number] }
+type nexus.Ticker struct { Percentage nullable.Nullable[json.Number] }
+type nexus.Ticker struct { QuoteVolume nullable.Nullable[json.Number] }
+type nexus.Ticker struct { Symbol *string }
+type nexus.Ticker struct { Timestamp *models.TimestampMs }
+type nexus.TierEntry struct
+type nexus.TierEntry struct { Address string }
+type nexus.TierEntry struct { Tier string }
+type nexus.TimeInForce = models.OrderRequestTimeInForce
+type nexus.TimeInForce string
+type nexus.Trade = models.Trade
+type nexus.Trade struct
+type nexus.Trade struct { Amount *json.Number }
+type nexus.Trade struct { Cost *json.Number }
+type nexus.Trade struct { Datetime *string }
+type nexus.Trade struct { Id *string }
+type nexus.Trade struct { Info *map[string]interface{} }
+type nexus.Trade struct { IsLiquidation *bool }
+type nexus.Trade struct { Price *json.Number }
+type nexus.Trade struct { Side *models.TradeSide }
+type nexus.Trade struct { Symbol *string }
+type nexus.Trade struct { TakerOrMaker nullable.Nullable[string] }
+type nexus.Trade struct { Timestamp *models.TimestampMs }
+type nexus.TradePrint struct
+type nexus.TradePrint struct { MarketID string }
+type nexus.TradePrint struct { Trade Trade }
+type nexus.Unrecognized struct
+type nexus.Unrecognized struct { Err error }
+type nexus.Unrecognized struct { Frame []byte }
+type nexus.Unsubscribed struct
+type nexus.Unsubscribed struct { Channel Channel }
+type nexus.VersionError = transport.VersionError
+type nexus.VersionError struct
+type nexus.VersionError struct { Current string }
+type nexus.VersionError struct { Err *transport.APIError }
+type nexus.VersionError struct { Min string }
+type nexus.VersionError struct { Pinned string }
+type nexus.VersionError struct { SpecURL string }
+type nexus.Withdrawal = models.Withdrawal
+type nexus.Withdrawal struct
+type nexus.Withdrawal struct { Amount models.Decimal }
+type nexus.Withdrawal struct { Id string }
+type nexus.Withdrawal struct { Status models.WithdrawalStatus }
+type nexus.Withdrawal struct { Timestamp models.TimestampMs }
+var nexus.ChannelBalances Channel = Channel{name: "balances"}
+var nexus.ChannelFills Channel = Channel{name: "fills"}
+var nexus.ChannelLiquidations Channel = Channel{name: "liquidations"}
+var nexus.ChannelOrders Channel = Channel{name: "orders"}
+var nexus.ChannelPositions Channel = Channel{name: "positions"}
+var nexus.ErrAccountUnresolved error
+var nexus.ErrAgentCannotWithdraw error
+var nexus.ErrConnectionStale error
+var nexus.ErrMainnetNotTargetable error
+var nexus.ErrMarginUnavailable error
+var nexus.ErrNoCredential error
+var nexus.ErrNotFound error
+var nexus.ErrRateLimited error
+var nexus.ErrSessionExpired error
+var nexus.ErrStreamClosed error
+var nexus.ErrTooManyConnections error
+var nexus.ErrUnauthorized error
