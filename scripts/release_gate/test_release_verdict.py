@@ -253,6 +253,20 @@ class Surface(unittest.TestCase):
                 for tag in ("v9.9.9", "v0.3.0"):  # not fetched; in the tree but unreadable
                     with self.subTest(tag), self.assertRaises(V.CannotDecide):
                         V.surface_at_tag(tag, "public-api.txt")
+                # The pin: a tag that isn't here points at the fetch depth, a file missing at a tag doesn't.
+                with self.assertRaisesRegex(V.CannotDecide, "fetch-depth"):
+                    V.pin_at_tag("v9.9.9", ".api-version")
+                with self.assertRaises(V.CannotDecide) as caught:
+                    V.pin_at_tag("v0.2.0", ".api-version")
+                self.assertNotIn("fetch-depth", str(caught.exception))
+                self.assertEqual(V.release_tags("v"), ["v0.3.0", "v0.2.0", "v0.1.0"])
+                # A registry that doesn't know a package with release tags is not a first release.
+                with mock.patch.object(V, "published_version", return_value=None):
+                    result = V.run(V.argparse.Namespace(
+                        report=False, published_version=None, registry="npm", package="x",
+                        proposed_version="0.4.0", manifest="package.json", tag_prefix="v"))
+                self.assertEqual(result["outcome"], "could-not-classify")
+                self.assertIn("v0.3.0", result["reason"])
             finally:
                 os.chdir(here)
 
@@ -397,6 +411,16 @@ class WithoutOasdiff(unittest.TestCase):
     def test_report_mode_exits_zero_on_an_unreadable_input_and_still_says_so(self):
         code, r = gate(*SAME_PIN, "--report", "--manifest", "/nonexistent/Cargo.toml")
         self.assertEqual((code, r["outcome"]), (0, "could-not-classify"))
+
+    def test_a_version_above_the_published_one_off_a_release_branch_is_called_out(self):
+        code, r = gate(*SAME_PIN, "--proposed-version", "0.11.2", "--report")
+        self.assertEqual((code, r["outcome"], r["bump"]), (0, "pass", "patch"))
+        self.assertIn("NOT gated", V.unenforced_release(r))
+        self.assertIn("Not enforced", V.render(r))
+        _, r = gate(*SAME_PIN, "--proposed-version", "0.11.1", "--report")
+        self.assertIsNone(V.unenforced_release(r))  # the usual PR: nothing pending
+        _, r = gate(*SAME_PIN, "--proposed-version", "0.11.2")
+        self.assertIsNone(V.unenforced_release(r))  # enforced: nothing to call out
 
     def test_a_package_never_published_passes(self):
         code, r = gate("--published-version", "", "--proposed-version", "0.1.0")

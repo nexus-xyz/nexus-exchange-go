@@ -42,7 +42,10 @@ once lost an item. The listing has no descriptions, so rewording does not count.
 
 Outside a release PR (`--report`), the same comparison runs against the version on the branch and
 reports what the next release will need, then exits 0: there is no release to gate, and the job
-runs anyway so it is not first exercised on the day it matters.
+runs anyway so it is not first exercised on the day it matters. The workflow decides "release PR"
+from the head branch's name, so a branch that proposes a version above the published one and still
+gets `--report` is called out with a warning: either a release PR on a branch the workflow does
+not recognise (it is not gated), or `main` holds a version that was never published.
 
 Exit codes: 0 pass (always, with --report), 1 the proposed version does not fit, 2 could not classify.
 Stdlib only.
@@ -247,15 +250,29 @@ def git_text(argv):
         raise CannotDecide(f"git {' '.join(argv)} printed something that is not UTF-8: {err}") from None
 
 
+def tag_commit(tag):
+    """Stop unless `tag` names a commit here. The usual cause is a shallow checkout."""
+    code, _, _ = git_text(["rev-parse", "--verify", "--quiet", f"{tag}^{{commit}}"])
+    if code != 0:
+        raise CannotDecide(f"cannot read tag {tag} (is the tag fetched? the job needs fetch-depth: 0)")
+    return f"{tag}^{{commit}}"
+
+
+def release_tags(prefix):
+    """This repo's release tags (`<prefix><digit>...`), newest first."""
+    code, out, err = git_text(["tag", "--list", f"{prefix}[0-9]*", "--sort=-v:refname"])
+    if code != 0:
+        raise CannotDecide(f"cannot list the release tags: {err}")
+    return out.split()
+
+
 def pin_at_tag(tag, pin_file):
     # No baseline fallback here, unlike surface_at_tag: without the published pin there is no spec
     # change to grade, and grading the spec is this gate's main job. Every published tag has the pin.
+    tag_commit(tag)
     code, out, err = git_text(["show", f"{tag}:{pin_file}"])
     if code != 0:
-        raise CannotDecide(
-            f"cannot read {pin_file} at tag {tag}: {err} "
-            "(is the tag fetched? the job needs fetch-depth: 0)"
-        )
+        raise CannotDecide(f"cannot read {pin_file} at tag {tag}: {err}")
     return read_pin(out, f"{pin_file} at {tag}")
 
 
@@ -288,10 +305,7 @@ def surface_at_tag(tag, surface_file):
 
     Anything else that stops the read (a tag that is not fetched, a file in the tree that cannot be
     read) cannot decide: only a snapshot known to be absent is `no-baseline`."""
-    commit = f"{tag}^{{commit}}"
-    code, _, _ = git_text(["rev-parse", "--verify", "--quiet", commit])
-    if code != 0:
-        raise CannotDecide(f"cannot read tag {tag} (is the tag fetched? the job needs fetch-depth: 0)")
+    commit = tag_commit(tag)
     code, listed, err = git_text(["ls-tree", "--full-tree", "--name-only", commit, "--", surface_file])
     if code != 0:
         raise CannotDecide(f"cannot list {surface_file} at tag {tag}: {err}")
@@ -349,6 +363,14 @@ def run(args):
         published_raw = args.published_version
         if published_raw is None:
             published_raw = published_version(args.registry, args.package)
+            tags = release_tags(args.tag_prefix) if not published_raw else []
+            if tags:
+                # A registry that has never heard of a package this repo has released is a wrong
+                # --package or a registry answering wrong, not a first release.
+                raise CannotDecide(
+                    f"{args.registry} has no published {args.package}, but this repo has release tags "
+                    f"({', '.join(tags[:3])}): check the package name"
+                )
         proposed = parse_version(args.proposed_version or manifest_version(args.manifest))
         result["proposed_version"] = fmt(proposed)
 
@@ -417,6 +439,18 @@ def cell(value):
     return "—" if value is None else f"`{value}`"
 
 
+def unenforced_release(result):
+    """The warning for a report-only run on a branch whose version is above the published one, or None."""
+    if result["mode"] != "report" or result["bump"] in (None, "none"):
+        return None
+    return (
+        f"this branch has version {result['proposed_version']}, above the published "
+        f"{result['published_version']}, but the verdict only reported because the head branch is not a "
+        "release PR's. If this is a release PR, the workflow does not recognise its branch and it is NOT "
+        "gated; otherwise the base holds a version that was never published."
+    )
+
+
 def render(result):
     """Markdown for the job summary. The outcome is the first thing a reader sees."""
     headline = {
@@ -440,6 +474,9 @@ def render(result):
         + (f" ({len(result['surface_removed'])} gone or changed, {result['surface_added']} new)"
            if result["surface_verdict"] else "") + " |",
     ]
+    unenforced = unenforced_release(result)
+    if unenforced:
+        lines += ["", f"> ⚠️ Not enforced: {unenforced}"]
     for change in result["breaking_changes"]:
         lines.append(f"- `{change.get('id')}` {change.get('operation', '')} {change.get('path', '')}: {change.get('text')}")
     if result["surface_removed"]:
@@ -485,6 +522,9 @@ def main(argv=None):
     if args.report and result["outcome"] != "pass":
         level = "warning"
     print(f"::{level} title=prepublish-verdict ({result['outcome']})::{result['reason']}", file=sys.stderr)
+    unenforced = unenforced_release(result)
+    if unenforced:
+        print(f"::warning title=prepublish-verdict (not enforced)::{unenforced}", file=sys.stderr)
     return 0 if args.report else EXIT[result["outcome"]]
 
 
