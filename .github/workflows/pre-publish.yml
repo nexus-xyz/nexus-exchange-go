@@ -1,0 +1,158 @@
+name: Pre-publish
+
+# The checks between a release PR and a published Go version (ENG-18798). Go has no registry: the
+# tag release-please pushes when the release PR merges is the release, and once anyone fetches it
+# through proxy.golang.org the proxy and sum.golang.org serve that content forever, whatever happens
+# to the tag. So publishing stays a person merging the release PR; these make sure what they merge
+# is not broken. Three jobs, with the same names in every SDK repo, so one required-checks setting
+# covers the fleet:
+#
+#   prepublish-surface  the module's public API equals the committed public-api.txt
+#   prepublish-smoke    a clean consumer of the committed tree reads the public testnet
+#   prepublish-verdict  the version the release PR proposes fits the spec change since the last
+#                       release, graded by the monorepo's classifier (scripts/release_gate/VENDORED.md)
+#
+# The drift checks are the fourth leg and are not repeated here: `spec-drift` (spec-drift.yml) and
+# CI's `spec-pin` already run on every PR, the release PR among them.
+#
+# RUNS ON EVERY PR, with no `paths:` filter, for spec-drift.yml's reason: a required check that is
+# skipped reports nothing, and the PR waits on it forever. What changes on a release PR (head branch
+# `release-please--branches--main--components--nexus-exchange-go`), or on a PR that edits this gate:
+#   * smoke makes the testnet read. Elsewhere it builds the consumer and checks the smoke's failed and
+#     unreachable outcomes against local stand-ins only, and says so.
+#   * verdict is enforced on a release PR. Elsewhere it reports what the next release will need.
+# The surface check is enforced on every PR, because the PR that changes the API is where the
+# snapshot has to move. A release PR moves only CHANGELOG.md and .release-please-manifest.json, so
+# it passes unchanged.
+#
+# smoke.sh exercises the smoke's outcomes on every run, before any testnet read: the built smoke
+# must exit 2 (unreachable) against a port where nothing listens and 1 (failed) against
+# stub_server.py, which answers with no markets. A wrong code fails the job as
+# `prepublish-smoke (outcomes)`.
+#
+# The release PR's runs start on their own only when release-please opens it with the release App's
+# token (release-please.yml). Without the RELEASE_BOT_* secrets it falls back to GITHUB_TOKEN, whose
+# PRs trigger no workflow, so the PR shows none of these checks. Do not merge it in that state
+# (CONTRIBUTING.md, "Releasing").
+#
+# These gate the release PR, not the tag. A tag pushed by hand skips this file and is a release all
+# the same, once the proxy has fetched it. Closing that is a tag ruleset, not a workflow change.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pre-publish-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The version classify_spec_change.py requires (its OASDIFF_VERSION), by checksum, as the
+  # monorepo installs it.
+  OASDIFF_VERSION: 1.30.0
+  OASDIFF_SHA256: bfa353e7c699dd201d52dd42839330a0d4ba0429767c8ec9fc0e5fdc650b8060
+
+jobs:
+  prepublish-surface:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Public API of the module vs public-api.txt
+        run: scripts/release_gate/public_api.sh
+
+  prepublish-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Release PR, or a change to this gate?
+        id: mode
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          # HEAD is the PR's merge commit (actions/checkout's default on pull_request), and its first
+          # parent is the base it was merged onto, so this lists the PR's own changes. Diffing from the
+          # event's base.sha also listed whatever landed on the base since, which flipped unrelated PRs
+          # into the testnet read.
+          if ! git rev-parse --verify --quiet 'HEAD^2' > /dev/null; then
+            echo "::error title=prepublish-smoke::HEAD is not a merge commit, so the PR's own changes can't be listed"
+            exit 1
+          fi
+          # Into a file, not a pipe: under pipefail a failed `git diff`, or one cut short by
+          # `grep -q` (SIGPIPE), would read as "not a gate change" and skip the read quietly.
+          git diff --name-only 'HEAD^1' HEAD > "$RUNNER_TEMP/changed.txt"
+          if [[ "$HEAD_REF" == release-please--branches--main* ]]; then
+            echo "mode=release" >> "$GITHUB_OUTPUT"
+          elif grep -qE '^(\.github/workflows/pre-publish\.yml|scripts/release_gate/)' "$RUNNER_TEMP/changed.txt"; then
+            echo "mode=gate-change" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=other" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build a clean consumer, check the outcomes, read testnet
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          if [ "$MODE" = "other" ]; then
+            scripts/release_gate/smoke.sh --build-only
+          else
+            scripts/release_gate/smoke.sh
+          fi
+
+  prepublish-verdict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The release tags: the spec pin and public-api.txt of the published version are read at
+          # `v<version>`.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install oasdiff ${{ env.OASDIFF_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" \
+            -o "$RUNNER_TEMP/oasdiff.tar.gz"
+          echo "${OASDIFF_SHA256}  $RUNNER_TEMP/oasdiff.tar.gz" | sha256sum -c
+          tar -xz -C "$RUNNER_TEMP" -f "$RUNNER_TEMP/oasdiff.tar.gz" oasdiff
+          echo "OASDIFF=$RUNNER_TEMP/oasdiff" >> "$GITHUB_ENV"
+      # The gate's own tests first, against the binary just installed: a broken gate fails as a
+      # broken gate, and a vendored file edited in this repo fails here, because its sha256 no
+      # longer matches the one recorded in release_verdict.py. A change to the monorepo's copy is
+      # not seen from here: VENDORED.md says how to refresh.
+      - name: Self-test the gate
+        env:
+          # The end-to-end tests fail instead of skipping if oasdiff is missing, so this step can't
+          # go green without running the classifier.
+          RELEASE_GATE_REQUIRE_OASDIFF: "1"
+        run: python3 scripts/release_gate/test_release_verdict.py
+      - name: Version proposed vs the spec change since the last release
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          # The published version is this repo's latest GitHub Release, which release-please
+          # creates with the tag. Read with the job's own read-only token: unauthenticated, the API
+          # allows 60 requests an hour per runner IP, which runners share, and a rate-limited read
+          # is a could-not-classify on the release PR.
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          args=(--registry github --package nexus-xyz/nexus-exchange-go --manifest .release-please-manifest.json)
+          if [[ "$HEAD_REF" != release-please--branches--main* ]]; then
+            args+=(--report)
+          fi
+          python3 scripts/release_gate/release_verdict.py "${args[@]}"

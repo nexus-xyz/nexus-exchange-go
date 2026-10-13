@@ -1,0 +1,2 @@
+# Byte-cache from the Python in scripts/release_gate/ (the verdict gate and its tests).
+__pycache__/
