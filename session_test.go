@@ -33,8 +33,8 @@ type fakeVenue struct {
 	agents   map[string]string // agent -> owner
 	// termsVersion is the terms_version the last registration carried.
 	termsVersion *uint32
-	logins   int
-	requests []string
+	logins       int
+	requests     []string
 	// depositStatus, when set, is how GET /account/deposit-target refuses.
 	depositStatus int
 }
