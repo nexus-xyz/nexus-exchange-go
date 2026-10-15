@@ -84,6 +84,25 @@ func TestRegisterAgentVectors(t *testing.T) {
 	}
 }
 
+// The four-field shape, pinned against the server's
+// register_agent::tests::the_digest_with_terms_for_each_network_matches_its_pinned_vector.
+func TestRegisterAgentWithTermsVectors(t *testing.T) {
+	agent, _ := ParseAddress("0xaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb")
+	for network, want := range map[string]string{
+		"mainnet": "422802a8fc760529083693ce0a8cc3b06b2492b25723b0a4b88a26a28ec86a85",
+		"testnet": "92cd47c15ae7986416f4508923012810d6e12a22d8d8e7d734aa75d07025ad7d",
+		"local":   "43c47ae217cff37b5e7b8aa5c0b82ede02d73953a3ea749270213296e1825dd9",
+	} {
+		d, err := RegisterAgentWithTermsDigest(20056, NetworkSalt(network), agent, 1_700_000_000, 1, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := hex.EncodeToString(d); got != want {
+			t.Fatalf("%s digest = %s, want %s", network, got, want)
+		}
+	}
+}
+
 // The spec's walletSignature test vector, which the accounts service pins as
 // PINNED_REVOKE (agent_management_auth.rs, digests_are_pinned).
 func TestRevokeAgentKeyVector(t *testing.T) {

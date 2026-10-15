@@ -107,6 +107,23 @@ func RegisterAgentDigest(chainID uint64, salt []byte, agent [20]byte, expiresAt,
 	})
 }
 
+// RegisterAgentWithTermsDigest is [RegisterAgentDigest] with the accepted
+// terms-of-use version appended: RegisterAgent{agent, expiresAt, nonce,
+// uint32 termsVersion}, the server's register_agent::digest_with_terms.
+func RegisterAgentWithTermsDigest(chainID uint64, salt []byte, agent [20]byte, expiresAt, nonce uint64, termsVersion uint32) ([]byte, error) {
+	return agentDigest(chainID, salt, "RegisterAgent", []apitypes.Type{
+		{Name: "agent", Type: "address"},
+		{Name: "expiresAt", Type: "uint64"},
+		{Name: "nonce", Type: "uint64"},
+		{Name: "termsVersion", Type: "uint32"},
+	}, apitypes.TypedDataMessage{
+		"agent":        common.Address(agent).Hex(),
+		"expiresAt":    strconv.FormatUint(expiresAt, 10),
+		"nonce":        strconv.FormatUint(nonce, 10),
+		"termsVersion": strconv.FormatUint(uint64(termsVersion), 10),
+	})
+}
+
 // RevokeAgentKeyDigest is the EIP-712 digest of RevokeAgentKey{account,
 // agent, nonce}, the owner wallet's authorisation of DELETE
 // /agents/{address}, under the same domain as [RegisterAgentDigest].

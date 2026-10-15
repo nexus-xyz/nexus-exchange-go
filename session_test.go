@@ -31,8 +31,10 @@ type fakeVenue struct {
 	mu       sync.Mutex
 	sessions map[string]string // token -> owner
 	agents   map[string]string // agent -> owner
-	logins   int
-	requests []string
+	// termsVersion is the terms_version the last registration carried.
+	termsVersion *uint32
+	logins       int
+	requests     []string
 	// depositStatus, when set, is how GET /account/deposit-target refuses.
 	depositStatus int
 }
@@ -84,10 +86,18 @@ func (v *fakeVenue) serve(w http.ResponseWriter, r *http.Request) {
 		reply(200, map[string]string{"token": token, "address": addr})
 		return
 	case "/agents/register":
-		var req models.AgentRegistrationRequest
+		var req struct {
+			models.AgentRegistrationRequest
+			TermsVersion *uint32 `json:"terms_version"`
+		}
 		_ = json.Unmarshal(body, &req)
 		agent, _ := signing.ParseAddress(req.Agent)
-		d, _ := signing.RegisterAgentDigest(20056, signing.NetworkSalt("local"), agent, uint64(*req.ExpiresAt), uint64(req.Nonce))
+		salt := signing.NetworkSalt("local")
+		d, _ := signing.RegisterAgentDigest(20056, salt, agent, uint64(*req.ExpiresAt), uint64(req.Nonce))
+		if req.TermsVersion != nil {
+			d, _ = signing.RegisterAgentWithTermsDigest(20056, salt, agent, uint64(*req.ExpiresAt), uint64(req.Nonce), *req.TermsVersion)
+		}
+		v.termsVersion = req.TermsVersion
 		addr, err := recoverHex(d, req.Signature)
 		if err != nil || addr != req.Wallet {
 			reply(401, map[string]string{"code": "signer_mismatch"})
@@ -264,6 +274,26 @@ func TestAgentTradesButCannotWithdraw(t *testing.T) {
 	}
 	if v.count() != sent {
 		t.Fatal("a refused withdrawal was sent")
+	}
+}
+
+// With TermsVersion set, the wallet signs the four-field RegisterAgent and
+// the body carries terms_version; the fake venue verifies that shape.
+func TestRegisterAgentSignsTermsVersion(t *testing.T) {
+	ctx := context.Background()
+	v, pub := newFakeVenue(t)
+	if _, err := pub.RegisterAgent(ctx, testKey(t), testKey(t), RegisterAgentOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if v.termsVersion != nil {
+		t.Fatalf("terms_version sent without TermsVersion: %d", *v.termsVersion)
+	}
+	version := uint32(3)
+	if _, err := pub.RegisterAgent(ctx, testKey(t), testKey(t), RegisterAgentOptions{TermsVersion: &version}); err != nil {
+		t.Fatal(err)
+	}
+	if v.termsVersion == nil || *v.termsVersion != 3 {
+		t.Fatalf("terms_version = %v, want 3", v.termsVersion)
 	}
 }
 
