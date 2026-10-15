@@ -566,6 +566,7 @@ type nexus.Reconnected struct
 type nexus.RegisterAgentOptions struct
 type nexus.RegisterAgentOptions struct { ExpiresAt time.Time }
 type nexus.RegisterAgentOptions struct { Label string }
+type nexus.RegisterAgentOptions struct { TermsVersion *uint32 }
 type nexus.STP = models.OrderRequestStp
 type nexus.STP string
 type nexus.ServerError struct

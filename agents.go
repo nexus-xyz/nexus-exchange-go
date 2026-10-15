@@ -85,11 +85,18 @@ type RegisterAgentOptions struct {
 	ExpiresAt time.Time
 	// Label names the agent in [Client.FetchAgents]. It is not signed.
 	Label string
+	// TermsVersion is the terms-of-use version the user accepted. When set,
+	// it is signed into RegisterAgent as uint32 termsVersion and sent as
+	// terms_version. Once the exchange requires a version, a registration
+	// without the current one is refused with 403 TermsVersionNotCurrent.
+	// Until the exchange verifies this shape on POST /agents/register
+	// (ENG-20416) it answers 401 signer_mismatch, so leave it nil until then.
+	TermsVersion *uint32
 }
 
 // RegisterAgent delegates trading from wallet to agent (POST
 // /agents/register). wallet signs an EIP-712 RegisterAgent{agent,
-// expiresAt, nonce} whose domain is salted with this client's network, so the
+// expiresAt, nonce}, plus termsVersion when opts.TermsVersion is set, whose domain is salted with this client's network, so the
 // registration verifies only there. No session or API key is needed; c may
 // have none.
 //
@@ -106,17 +113,32 @@ func (c *Client) RegisterAgent(ctx context.Context, wallet, agent *PrivateKey, o
 	}
 	expMs, nonce := expires.UnixMilli(), now.UnixMilli()
 	agentAddr, _ := signing.ParseAddress(agent.Address()) // derived, so always valid
-	digest, err := signing.RegisterAgentDigest(registerChainID, signing.NetworkSalt(c.network.String()),
-		agentAddr, uint64(expMs), uint64(nonce))
+	salt := signing.NetworkSalt(c.network.String())
+	var digest []byte
+	var err error
+	if opts.TermsVersion == nil {
+		digest, err = signing.RegisterAgentDigest(registerChainID, salt, agentAddr, uint64(expMs), uint64(nonce))
+	} else {
+		digest, err = signing.RegisterAgentWithTermsDigest(registerChainID, salt, agentAddr,
+			uint64(expMs), uint64(nonce), *opts.TermsVersion)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("nexus: RegisterAgent typed data: %w", err)
 	}
-	body := models.AgentRegistrationRequest{
-		Wallet:    wallet.Address(),
-		Agent:     agent.Address(),
-		ExpiresAt: &expMs,
-		Nonce:     nonce,
-		Signature: "0x" + hex.EncodeToString(signing.SignHash(wallet.key(), digest)),
+	// The pinned spec's request model has no terms_version yet, so it rides
+	// beside the embedded model.
+	body := struct {
+		models.AgentRegistrationRequest
+		TermsVersion *uint32 `json:"terms_version,omitempty"`
+	}{
+		AgentRegistrationRequest: models.AgentRegistrationRequest{
+			Wallet:    wallet.Address(),
+			Agent:     agent.Address(),
+			ExpiresAt: &expMs,
+			Nonce:     nonce,
+			Signature: "0x" + hex.EncodeToString(signing.SignHash(wallet.key(), digest)),
+		},
+		TermsVersion: opts.TermsVersion,
 	}
 	if opts.Label != "" {
 		body.Label = &opts.Label
