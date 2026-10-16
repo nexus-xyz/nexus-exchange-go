@@ -156,7 +156,7 @@ like the spec repo and the TypeScript and Python SDKs.
    built from Conventional Commit subjects (`feat:`, `fix:`, `feat!:`). It
    updates `CHANGELOG.md` and `.release-please-manifest.json`. Nothing ships
    while it is open. The PR is opened with a token from the org release App,
-   so CI runs on it. If the repo lacks the `RELEASE_BOT_APP_ID` /
+   so CI runs on it. If the repo lacks the `RELEASE_BOT_CLIENT_ID` /
    `RELEASE_BOT_PRIVATE_KEY` secrets, the workflow falls back to
    `GITHUB_TOKEN` and the PR shows no checks at all (there is no run to
    approve). Do not merge it in that state.
