@@ -34,11 +34,12 @@ jobs:
       # release PR would merge with no CI run on it. A token from the org release
       # App (nexus-release-bot2, same as nexus-exchange-cli) does trigger them
       # (ENG-18229). Falls back to GITHUB_TOKEN until the repo has the App secrets.
-      - uses: actions/create-github-app-token@v3
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         if: env.HAS_RELEASE_BOT == 'true'
         with:
-          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          # The App's numeric ID works as client-id: the action sends either one as the JWT issuer.
+          client-id: ${{ secrets.RELEASE_BOT_APP_ID }}
           private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
       - uses: googleapis/release-please-action@v5
         with:
