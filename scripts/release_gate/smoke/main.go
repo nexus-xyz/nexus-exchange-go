@@ -20,6 +20,10 @@
 // The SDK has already retried a GET that failed with a transport error, a 5xx or a 429 before it
 // returns; the deadline bounds those retries.
 //
+// Each way to an outcome prints its own line, `smoke: <outcome>: <what happened>`, so smoke.sh's
+// outcome probes check the line as well as the exit code and a probe can't pass for another reason
+// (five paths end in 1, two in 2).
+//
 // No keys, no writes, no orders. NEXUS_SMOKE_BASE_URL points it elsewhere, for testing the
 // outcomes themselves: scheme://host[:port], which replaces the testnet's while the SDK's own path
 // is kept (/v1/markets/summary), so the client is still a nexus.Testnet one. The SDK has no custom
@@ -69,6 +73,11 @@ func main() {
 	markets, err := client.FetchMarketsSummary(ctx)
 	if err != nil {
 		if unreachable(err) {
+			// Two lines, so smoke.sh can tell an outage from nothing listening.
+			var apiErr *nexus.APIError
+			if errors.As(err, &apiErr) {
+				finish(2, fmt.Sprintf("%s answered HTTP %d, which it may recover from: %v", target, apiErr.StatusCode, err))
+			}
 			finish(2, fmt.Sprintf("%s gave no usable answer: %v", target, err))
 		}
 		finish(1, fmt.Sprintf("FetchMarketsSummary against %s failed: %v", target, err))
