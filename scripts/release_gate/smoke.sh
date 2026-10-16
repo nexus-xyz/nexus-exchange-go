@@ -20,9 +20,11 @@
 #   http://127.0.0.1:1, where nothing listens, must exit 2 (unreachable, never a pass);
 #   `stub_server.py 503`, a server in an outage, must exit 2 (unreachable, never failed or passed);
 #   stub_server.py, which answers every request with an empty list, must exit 1 (failed).
-# Exit 0 is exercised only by the real read, which runs on the release PR and on a change to this
-# gate. Each probe runs under `timeout 180` (above the smoke's own 2-minute deadline, which bounds
-# the SDK's retries); a wrong code, or a probe that hits the timeout, fails this script as
+# Each must also print the line for that case (main.go has one per path: five end in 1, two in 2),
+# so a probe can't pass on the right code for another reason. Exit 0 is exercised only by the real
+# read, which runs on the release PR and on a change to this gate. Each probe runs under
+# `timeout 180` (above the smoke's own 2-minute deadline, which bounds the SDK's retries); a wrong
+# code, a wrong line, or a probe that hits the timeout, fails this script as
 # `prepublish-smoke (outcomes)`, naming the case. Without GNU `timeout` or `gtimeout` (macOS has
 # neither by default) the probes run with no time limit, and say so. The probes call the binary directly
 # and keep both its stdout and stderr, so they raise none of the annotations below; each prints one
@@ -79,9 +81,9 @@ else
 fi
 
 # The outcome checks. Each runs the built smoke directly, both output streams captured, under a
-# hard timeout when there is one, and compares its exit code.
+# hard timeout when there is one, and compares its exit code, then the start of its first line.
 expect() {
-  local name="$1" base="$2" want="$3" out got first
+  local name="$1" base="$2" want="$3" want_line="$4" out got first
   set +e
   out="$(NEXUS_SMOKE_BASE_URL="$base" ${limit[@]+"${limit[@]}"} "$work/smoke" 2>&1)"
   got=$?
@@ -97,7 +99,12 @@ expect() {
     summary "❌ OUTCOME CHECK FAILED" "${name}: exited ${got}, not ${want}. ${first}"
     exit 1
   fi
-  echo "outcome check, ${name}: exit ${got} as it must; first line: ${first}"
+  if [[ "$first" != "$want_line"* ]]; then
+    echo "::error title=prepublish-smoke (outcomes)::${name}: the smoke exited ${got} as it must, but for another reason: its first line does not start with '${want_line}', so its outcomes cannot be trusted. First line: ${first}"
+    summary "❌ OUTCOME CHECK FAILED" "${name}: exited ${got} for another reason. ${first}"
+    exit 1
+  fi
+  echo "outcome check, ${name}: exit ${got} and its line, as it must; first line: ${first}"
 }
 
 # Starts stub_server.py with its arguments in the background and sets stub_pid and port.
@@ -106,14 +113,15 @@ start_stub() {
   : > "$work/stub.port"
   python3 -I "$work/sdk/scripts/release_gate/stub_server.py" "$@" > "$work/stub.port" &
   stub_pid=$!
-  port=""
+  # Wait for the first line to end (a newline in the file), or for the stub to die, so the read
+  # below never takes a port the stub is still writing.
   for _ in $(seq 50); do
-    port="$(head -n 1 "$work/stub.port")"
-    [ -n "$port" ] && break
+    if [ "$(wc -l < "$work/stub.port")" -ge 1 ] || ! kill -0 "$stub_pid" 2>/dev/null; then break; fi
     sleep 0.1
   done
-  if [ -z "$port" ]; then
-    echo "::error title=prepublish-smoke (outcomes)::stub_server.py $* printed no port, so that outcome was not checked."
+  port="$(head -n 1 "$work/stub.port")"
+  if ! [[ "$port" =~ ^[0-9]+$ ]]; then
+    echo "::error title=prepublish-smoke (outcomes)::stub_server.py $* printed no port (got '${port}'), so that outcome was not checked."
     exit 1
   fi
 }
@@ -124,14 +132,17 @@ stop_stub() {
   stub_pid=""
 }
 
-expect "nothing listening" "http://127.0.0.1:1" 2
+expect "nothing listening" "http://127.0.0.1:1" 2 \
+  "smoke: unreachable: http://127.0.0.1:1 gave no usable answer: "
 
 start_stub 503
-expect "a server answering 503" "http://127.0.0.1:${port}" 2
+expect "a server answering 503" "http://127.0.0.1:${port}" 2 \
+  "smoke: unreachable: http://127.0.0.1:${port} answered HTTP 503, "
 stop_stub
 
 start_stub
-expect "a server with no markets" "http://127.0.0.1:${port}" 1
+expect "a server with no markets" "http://127.0.0.1:${port}" 1 \
+  "smoke: failed: FetchMarketsSummary decoded an EMPTY list from http://127.0.0.1:${port}"
 stop_stub
 
 if [ "$mode" = "build" ]; then
