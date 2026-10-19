@@ -1,5 +1,9 @@
 # nexus-exchange-go
 
+> [!WARNING]
+> **This repository is archived and no longer maintained.** The Nexus Exchange API it was built for is being
+> shut down, and no further releases will be published.
+
 The official Go SDK for the Nexus Exchange API: REST market data and trading,
 the market-data and account WebSockets, and every credential the API accepts
 (API keys, wallet sign-in, agent keys).
