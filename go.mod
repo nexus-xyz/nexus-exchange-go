@@ -1,3 +1,4 @@
+// Deprecated: the Nexus Exchange API is being shut down and this module is no longer maintained.
 module github.com/nexus-xyz/nexus-exchange-go
 
 go 1.26.0
