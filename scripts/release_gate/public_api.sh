@@ -47,7 +47,10 @@ export GOWORK=off
   echo "::error title=prepublish-surface::The public-surface lister's own tests fail (scripts/release_gate/surface), so no listing was compared."
   exit 1
 }
-(cd "$lister" && go run . "$root") > "$work/public-api.txt"
+(cd "$lister" && go run . "$root") > "$work/public-api.txt" || {
+  echo "::error title=prepublish-surface::The public-surface lister passed its own tests but failed on this tree (scripts/release_gate/surface), so no listing was compared. The error is above."
+  exit 1
+}
 
 if [ "$mode" = "write" ]; then
   cp "$work/public-api.txt" "$SNAPSHOT"
